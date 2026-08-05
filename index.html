@@ -935,10 +935,10 @@
                 </div>
             </div>
             <div class="config-section">
-                <h3><i class="fas fa-chart-simple"></i> Resumen de Vencimientos</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 12px;">Próximos trámites a vencer:</p>
+                <h3><i class="fas fa-chart-simple"></i> Trámites próximos a finalizar</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 12px;">Próximos trámites a finalizar:</p>
                 <div id="vencimientosList" style="max-height: 300px; overflow-y: auto;">
-                    <p style="color: var(--text-secondary);">No hay vencimientos próximos.</p>
+                    <p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>
                 </div>
             </div>
         </div>
@@ -960,8 +960,8 @@
                     <select id="filterEstado" onchange="renderTable()">
                         <option value="">Todos los estados</option>
                         <option value="on-time">Al día</option>
-                        <option value="warning">Próximo a vencer</option>
-                        <option value="expired">Vencido</option>
+                        <option value="warning">Próximo a finalizar</option>
+                        <option value="expired">Finalizado</option>
                     </select>
                 </div>
                 <button class="btn btn-primary" onclick="openTramiteModal()">
@@ -984,10 +984,10 @@
                         <tr>
                             <th onclick="sortTable('fecha')">Fecha <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('tramite')">Trámite <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('nombreCliente')">Nombre / Cliente <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('nroEntrada')">N° Entrada <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('urgencia')">Común/Urgente <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('para')">Para <i class="fas fa-sort"></i></th>
-                            <th onclick="sortTable('entrada')">Entrada <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('salida')">Salida <i class="fas fa-sort"></i></th>
                             <th>Estado</th>
                             <th>Notas</th>
@@ -1060,6 +1060,10 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label>Nombre / Cliente *</label>
+                        <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
+                    </div>
+                    <div class="form-group">
                         <label>N° de Entrada</label>
                         <div style="display:flex; gap:8px;">
                             <input type="text" id="tramiteNroEntrada" placeholder="Número de entrada" style="flex:1;">
@@ -1068,6 +1072,8 @@
                             </button>
                         </div>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label>Urgencia</label>
                         <select id="tramiteUrgencia" onchange="calcularSalida()">
@@ -1075,23 +1081,18 @@
                             <option value="Urgente">Urgente</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Para (Escribano) *</label>
                         <select id="tramitePara" required>
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Fecha de Entrada</label>
-                        <input type="date" id="tramiteEntrada">
-                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Fecha de Salida (Estimada)</label>
-                        <input type="date" id="tramiteSalida">
+                        <input type="date" id="tramiteSalida" readonly style="background-color: var(--hover-row);">
+                        <small style="color: var(--text-secondary); display: block; margin-top: 4px;">Calculada automáticamente según tipo de trámite y urgencia</small>
                     </div>
                     <div class="form-group">
                         <label>Notas</label>
@@ -1350,7 +1351,7 @@
             });
             document.getElementById('statAlDia').textContent = alDia.length;
             
-            // Vencimientos próximos
+            // Trámites próximos a finalizar
             const vencimientosList = document.getElementById('vencimientosList');
             const proximos = tramites
                 .filter(t => t.salida)
@@ -1358,18 +1359,24 @@
                 .slice(0, 10);
             
             if (proximos.length === 0) {
-                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay vencimientos próximos.</p>';
+                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>';
             } else {
                 vencimientosList.innerHTML = proximos.map(t => {
                     const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
                     let badgeClass = 'on-time';
-                    if (diff < 0) badgeClass = 'expired';
-                    else if (diff <= 3) badgeClass = 'warning';
+                    let estadoTexto = 'Al día';
+                    if (diff < 0) { 
+                        badgeClass = 'expired'; 
+                        estadoTexto = 'Finalizado'; 
+                    } else if (diff <= 3) { 
+                        badgeClass = 'warning'; 
+                        estadoTexto = 'Próximo a finalizar'; 
+                    }
                     
                     return `
                         <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
-                            <span><strong>${t.tramite}</strong> - ${t.para || 'Sin asignar'}</span>
-                            <span class="status-badge ${badgeClass}">${diff < 0 ? 'Vencido' : diff + ' días'}</span>
+                            <span><strong>${t.tramite}</strong> - ${t.para || 'Sin asignar'}${t.nombreCliente ? ' (' + t.nombreCliente + ')' : ''}</span>
+                            <span class="status-badge ${badgeClass}">${estadoTexto}</span>
                         </div>`;
                 }).join('');
             }
@@ -1409,7 +1416,7 @@
             tramites.sort((a, b) => {
                 let valA = a[sortColumn] || '';
                 let valB = b[sortColumn] || '';
-                if (sortColumn === 'fecha' || sortColumn === 'entrada' || sortColumn === 'salida') {
+                if (sortColumn === 'fecha' || sortColumn === 'salida') {
                     valA = new Date(valA || 0);
                     valB = new Date(valB || 0);
                 }
@@ -1436,7 +1443,7 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const diff = Math.ceil((new Date(tramite.salida) - today) / (1000 * 60 * 60 * 24));
-            if (diff < 0) return { class: 'expired', text: 'Vencido' };
+            if (diff < 0) return { class: 'expired', text: 'Finalizado' };
             if (diff <= 3) return { class: 'warning', text: 'Próximo' };
             return { class: 'on-time', text: 'Al día' };
         }
@@ -1464,11 +1471,11 @@
                     <tr>
                         <td>${t.fecha || '-'}</td>
                         <td>${t.tramite || '-'}</td>
+                        <td>${t.nombreCliente || '-'}</td>
                         <td>${t.nroEntrada || '-'}</td>
                         <td class="${urgenciaClass}">${t.urgencia || 'Común'}</td>
                         <td>${t.para || '-'}</td>
-                        <td>${t.entrada || '-'}</td>
-                        <td>${t.salida || 'Pendiente'}</td>
+                        <td>${t.salida || '-'}</td>
                         <td><span class="status-badge ${estado.class}">${estado.text}</span></td>
                         <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.notas || ''}">${t.notas || '-'}</td>
                         <td>${t.fotoData ? `<img src="${t.fotoData}" class="photo-thumb" onclick="viewPhoto('${t.id}')" alt="Foto">` : '-'}</td>
@@ -1519,10 +1526,10 @@
                     document.getElementById('tramiteId').value = tramite.id;
                     document.getElementById('tramiteFecha').value = tramite.fecha || '';
                     document.getElementById('tramiteTipo').value = tramite.tramite || '';
+                    document.getElementById('tramiteNombreCliente').value = tramite.nombreCliente || '';
                     document.getElementById('tramiteNroEntrada').value = tramite.nroEntrada || '';
                     document.getElementById('tramiteUrgencia').value = tramite.urgencia || 'Común';
                     document.getElementById('tramitePara').value = tramite.para || '';
-                    document.getElementById('tramiteEntrada').value = tramite.entrada || '';
                     document.getElementById('tramiteSalida').value = tramite.salida || '';
                     document.getElementById('tramiteNotas').value = tramite.notas || '';
                     
@@ -1561,22 +1568,22 @@
         function calcularSalida() {
             const tipoNombre = document.getElementById('tramiteTipo').value;
             const urgencia = document.getElementById('tramiteUrgencia').value;
-            const fechaEntrada = document.getElementById('tramiteEntrada').value;
+            const fechaInput = document.getElementById('tramiteFecha').value;
             
-            if (!tipoNombre || !fechaEntrada) return;
+            if (!tipoNombre || !fechaInput) return;
             
             const config = getConfig();
             const tipoTramite = config.tiposTramite.find(t => t.nombre === tipoNombre);
             if (!tipoTramite) return;
             
-            const entrada = new Date(fechaEntrada + 'T00:00:00');
+            const fechaBase = new Date(fechaInput + 'T00:00:00');
             if (urgencia === 'Urgente') {
-                entrada.setHours(entrada.getHours() + parseInt(tipoTramite.urgente) || 48);
+                fechaBase.setHours(fechaBase.getHours() + parseInt(tipoTramite.urgente) || 48);
             } else {
-                entrada.setDate(entrada.getDate() + parseInt(tipoTramite.comun) || 15);
+                fechaBase.setDate(fechaBase.getDate() + parseInt(tipoTramite.comun) || 15);
             }
             
-            document.getElementById('tramiteSalida').value = entrada.toISOString().split('T')[0];
+            document.getElementById('tramiteSalida').value = fechaBase.toISOString().split('T')[0];
         }
 
         function saveTramite(event) {
@@ -1587,18 +1594,18 @@
                 id: id || Date.now().toString(),
                 fecha: document.getElementById('tramiteFecha').value,
                 tramite: document.getElementById('tramiteTipo').value,
+                nombreCliente: document.getElementById('tramiteNombreCliente').value,
                 nroEntrada: document.getElementById('tramiteNroEntrada').value,
                 urgencia: document.getElementById('tramiteUrgencia').value,
                 para: document.getElementById('tramitePara').value,
-                entrada: document.getElementById('tramiteEntrada').value,
                 salida: document.getElementById('tramiteSalida').value,
                 notas: document.getElementById('tramiteNotas').value,
                 fotoData: document.getElementById('tramiteFotoData').value || currentPhotoData || ''
             };
             
             // Validaciones
-            if (!tramite.fecha || !tramite.tramite || !tramite.para) {
-                showToast('Por favor complete los campos obligatorios.', 'error');
+            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente) {
+                showToast('Por favor complete los campos obligatorios (Fecha, Trámite, Nombre/Cliente y Para).', 'error');
                 return;
             }
             
@@ -1947,10 +1954,10 @@
             const data = tramites.map(t => ({
                 Fecha: t.fecha,
                 Trámite: t.tramite,
+                'Nombre / Cliente': t.nombreCliente,
                 'N° Entrada': t.nroEntrada,
                 Urgencia: t.urgencia,
                 Para: t.para,
-                Entrada: t.entrada,
                 Salida: t.salida,
                 Notas: t.notas
             }));
@@ -1968,12 +1975,12 @@
             
             const tramites = getFilteredTramites();
             const rows = tramites.map(t => [
-                t.fecha, t.tramite, t.nroEntrada, t.urgencia, t.para, 
-                t.entrada, t.salida, t.notas || ''
+                t.fecha, t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para, 
+                t.salida, t.notas || ''
             ]);
             
             doc.autoTable({
-                head: [['Fecha', 'Trámite', 'N° Entrada', 'Urgencia', 'Para', 'Entrada', 'Salida', 'Notas']],
+                head: [['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Para', 'Salida', 'Notas']],
                 body: rows,
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [91, 127, 149] }
@@ -2008,10 +2015,10 @@
                                 id: Date.now().toString() + Math.random(),
                                 fecha: row['Fecha'] || row['fecha'] || '',
                                 tramite: row['Trámite'] || row['tramite'] || '',
+                                nombreCliente: row['Nombre / Cliente'] || row['nombreCliente'] || row['Nombre/Cliente'] || '',
                                 nroEntrada: row['N° Entrada'] || row['nroEntrada'] || '',
                                 urgencia: row['Urgencia'] || row['urgencia'] || 'Común',
                                 para: row['Para'] || row['para'] || '',
-                                entrada: row['Entrada'] || row['entrada'] || '',
                                 salida: row['Salida'] || row['salida'] || '',
                                 notas: row['Notas'] || row['notas'] || '',
                                 fotoData: ''
