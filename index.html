@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Trámites - Escribanía</title>
-    
+
     <!-- Font Awesome para iconografía -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Tesseract.js para OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
+    </script>
+
     <!-- SheetJS para exportar/importar Excel -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-    
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js">
+    </script>
+
     <!-- jsPDF para exportar PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js">
+    </script>
 
     <style>
         :root {
@@ -27,7 +31,7 @@
             --accent: #5b7f95;
             --accent-light: #7fa3b5;
             --border: #e0e5ec;
-            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
             --danger: #e74c3c;
             --warning: #f39c12;
             --success: #27ae60;
@@ -35,7 +39,7 @@
             --sidebar-text: #ecf0f1;
             --hover-row: #f0f4f8;
             --urgent-bg: #ffeaea;
-            --modal-overlay: rgba(0,0,0,0.5);
+            --modal-overlay: rgba(0, 0, 0, 0.5);
             --toast-bg: #2c3e50;
             --toast-text: #ffffff;
             --badge-green: #d4edda;
@@ -47,6 +51,8 @@
             --card-bg: #ffffff;
             --input-bg: #ffffff;
             --button-hover: #4a6a7c;
+            --rpi-color: #5b7f95;
+            --catastro-color: #8e44ad;
         }
 
         .dark-mode {
@@ -55,16 +61,18 @@
             --text-primary: #e0e0e0;
             --text-secondary: #a0a0a0;
             --border: #3a3d44;
-            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
             --sidebar-bg: #1a1d23;
             --sidebar-text: #e0e0e0;
             --hover-row: #2a2d35;
             --urgent-bg: #3d2020;
-            --modal-overlay: rgba(0,0,0,0.8);
+            --modal-overlay: rgba(0, 0, 0, 0.8);
             --toast-bg: #1a1d23;
             --card-bg: #252830;
             --input-bg: #2a2d35;
             --button-hover: #3d505f;
+            --rpi-color: #5b7f95;
+            --catastro-color: #8e44ad;
         }
 
         * {
@@ -96,7 +104,7 @@
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.15);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
         }
 
         .sidebar.closed {
@@ -105,7 +113,7 @@
 
         .sidebar-header {
             padding: 24px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -138,21 +146,21 @@
         }
 
         .sidebar-nav a:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-left-color: var(--accent-light);
         }
 
         .sidebar-nav a.active {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             border-left-color: var(--accent-light);
             font-weight: 600;
         }
 
         .sidebar-footer {
             padding: 16px 24px;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             font-size: 0.85rem;
-            color: rgba(255,255,255,0.5);
+            color: rgba(255, 255, 255, 0.5);
         }
 
         .dark-mode-toggle {
@@ -166,7 +174,7 @@
         }
 
         .dark-mode-toggle:hover {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         /* Overlay móvil */
@@ -258,7 +266,7 @@
 
         .stat-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
         }
 
         .stat-icon {
@@ -272,10 +280,26 @@
             flex-shrink: 0;
         }
 
-        .stat-icon.blue { background: #e8f0fe; color: #5b7f95; }
-        .stat-icon.yellow { background: #fff8e1; color: #f39c12; }
-        .stat-icon.red { background: #fde8e8; color: #e74c3c; }
-        .stat-icon.green { background: #e8f5e9; color: #27ae60; }
+        .stat-icon.blue {
+            background: #e8f0fe;
+            color: #5b7f95;
+        }
+        .stat-icon.yellow {
+            background: #fff8e1;
+            color: #f39c12;
+        }
+        .stat-icon.red {
+            background: #fde8e8;
+            color: #e74c3c;
+        }
+        .stat-icon.green {
+            background: #e8f5e9;
+            color: #27ae60;
+        }
+        .stat-icon.purple {
+            background: #f3e5f5;
+            color: #8e44ad;
+        }
 
         .stat-info h3 {
             font-size: 0.85rem;
@@ -291,7 +315,137 @@
             font-weight: 700;
         }
 
-        /* Barra de herramientas */
+        /* Selector RPI / Catastro */
+        .selector-tramite {
+            display: flex;
+            gap: 0;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .selector-tramite button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .selector-tramite button.active-rpi {
+            background: var(--rpi-color);
+            color: white;
+            border-bottom-color: var(--rpi-color);
+        }
+
+        .selector-tramite button.active-catastro {
+            background: var(--catastro-color);
+            color: white;
+            border-bottom-color: var(--catastro-color);
+        }
+
+        .selector-tramite button:hover:not(.active-rpi):not(.active-catastro) {
+            background: var(--hover-row);
+        }
+
+        /* Cards de selección en inicio */
+        .module-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .module-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 50px 30px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 3px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .module-card.rpi-card:hover {
+            border-color: var(--rpi-color);
+        }
+
+        .module-card.catastro-card:hover {
+            border-color: var(--catastro-color);
+        }
+
+        .module-card i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .module-card.rpi-card i {
+            color: var(--rpi-color);
+        }
+
+        .module-card.catastro-card i {
+            color: var(--catastro-color);
+        }
+
+        .module-card h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .module-card p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Pestañas en modal */
+        .modal-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .modal-tabs button {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .modal-tabs button.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .modal-tabs button:hover {
+            background: var(--hover-row);
+        }
+
+        /* Toolbar */
         .toolbar {
             display: flex;
             gap: 12px;
@@ -320,7 +474,7 @@
         .search-box input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(91,127,149,0.15);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
         }
 
         .search-box i {
@@ -352,7 +506,7 @@
         .btn:hover {
             background: var(--hover-row);
             transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .btn-primary {
@@ -429,7 +583,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1100px;
+            min-width: 1200px;
         }
 
         thead th {
@@ -467,6 +621,7 @@
 
         tbody tr {
             transition: background 0.2s;
+            cursor: pointer;
         }
 
         tbody tr:hover {
@@ -497,6 +652,11 @@
             color: var(--badge-text-red);
         }
 
+        .status-badge.retirado {
+            background: #cce5ff;
+            color: #004085;
+        }
+
         .urgent-indicator {
             color: var(--danger);
             font-weight: 700;
@@ -519,6 +679,14 @@
         .actions-cell {
             display: flex;
             gap: 6px;
+            align-items: center;
+        }
+
+        .actions-cell input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
         }
 
         .empty-state {
@@ -531,6 +699,25 @@
             font-size: 3rem;
             margin-bottom: 16px;
             opacity: 0.5;
+        }
+
+        .badge-modulo {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-modulo.rpi {
+            background: #e8f0fe;
+            color: #5b7f95;
+        }
+
+        .badge-modulo.catastro {
+            background: #f3e5f5;
+            color: #8e44ad;
         }
 
         /* Modal */
@@ -563,7 +750,7 @@
             max-width: 650px;
             max-height: 85vh;
             overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             transform: translateY(20px);
             transition: transform 0.3s;
         }
@@ -642,7 +829,7 @@
         .form-group textarea:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(91,127,149,0.15);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
         }
 
         .form-row {
@@ -713,7 +900,7 @@
             border-radius: 10px;
             font-size: 0.9rem;
             font-weight: 500;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
             animation: slideIn 0.3s ease;
             display: flex;
             align-items: center;
@@ -722,19 +909,37 @@
             max-width: 400px;
         }
 
-        .toast.success { border-left: 4px solid var(--success); }
-        .toast.error { border-left: 4px solid var(--danger); }
-        .toast.warning { border-left: 4px solid var(--warning); }
-        .toast.info { border-left: 4px solid var(--accent); }
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
 
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
         }
 
         /* Config section */
@@ -781,6 +986,54 @@
         .config-list .item-actions {
             display: flex;
             gap: 6px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* Detalle de trámite */
+        .detalle-tramite {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .detalle-tramite h4 {
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .detalle-tramite-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 20px;
+        }
+
+        .detalle-tramite-grid .label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .detalle-tramite-grid .value {
+            color: var(--text-primary);
         }
 
         /* Responsive */
@@ -841,6 +1094,16 @@
             .modal-overlay {
                 align-items: flex-end;
             }
+
+            .module-selector {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .detalle-tramite-grid {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -867,7 +1130,7 @@
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
+    <nav class="sidebar closed" id="sidebar">
         <div class="sidebar-header">
             <i class="fas fa-scale-balanced"></i>
             <span>Escribanía</span>
@@ -888,12 +1151,12 @@
             <span>Modo Oscuro</span>
         </div>
         <div class="sidebar-footer">
-            Gestión de Trámites v1.0
+            Gestión de Trámites v2.0
         </div>
     </nav>
 
     <!-- Contenido Principal -->
-    <main class="main-content" id="mainContent">
+    <main class="main-content expanded" id="mainContent">
         <!-- Top Bar -->
         <div class="top-bar">
             <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">
@@ -904,47 +1167,83 @@
 
         <!-- Página Inicio -->
         <div id="page-home" class="page active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
-                    <div class="stat-info">
-                        <h3>Total Trámites</h3>
-                        <p id="statTotal">0</p>
+            <!-- Selector de módulo -->
+            <div id="moduleSelector">
+                <div class="module-selector">
+                    <div class="module-card rpi-card" onclick="seleccionarModulo('rpi')">
+                        <i class="fas fa-building"></i>
+                        <h2>RPI</h2>
+                        <p>Registro de la Propiedad Inmueble</p>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
-                    <div class="stat-info">
-                        <h3>Pendientes</h3>
-                        <p id="statPendientes">0</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div class="stat-info">
-                        <h3>Urgentes</h3>
-                        <p id="statUrgentes">0</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-                    <div class="stat-info">
-                        <h3>Al Día</h3>
-                        <p id="statAlDia">0</p>
+                    <div class="module-card catastro-card" onclick="seleccionarModulo('catastro')">
+                        <i class="fas fa-map"></i>
+                        <h2>Catastro</h2>
+                        <p>Gestión de trámites catastrales</p>
                     </div>
                 </div>
             </div>
-            <div class="config-section">
-                <h3><i class="fas fa-chart-simple"></i> Trámites próximos a finalizar</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 12px;">Próximos trámites a finalizar:</p>
-                <div id="vencimientosList" style="max-height: 300px; overflow-y: auto;">
-                    <p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>
+
+            <!-- Dashboard del módulo seleccionado -->
+            <div id="moduleDashboard" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                    <h2 id="moduleTitle" style="font-size:1.5rem;">RPI</h2>
+                    <button class="btn" onclick="volverSelector()">
+                        <i class="fas fa-arrow-left"></i> Cambiar módulo
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Trámites</h3>
+                            <p id="statTotal">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <h3>Pendientes</h3>
+                            <p id="statPendientes">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <h3>Urgentes</h3>
+                            <p id="statUrgentes">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <h3>Al Día</h3>
+                            <p id="statAlDia">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-chart-simple"></i> Trámites próximos a finalizar</h3>
+                    <div id="vencimientosList" style="max-height: 300px; overflow-y: auto;">
+                        <p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Página Trámites -->
         <div id="page-tramites" class="page" style="display:none;">
+            <!-- Selector RPI/Catastro -->
+            <div class="selector-tramite" id="tramiteSelector">
+                <button class="active-rpi" data-modulo="rpi" onclick="cambiarFiltroModulo('rpi')">
+                    <i class="fas fa-building"></i> RPI
+                </button>
+                <button data-modulo="catastro" onclick="cambiarFiltroModulo('catastro')">
+                    <i class="fas fa-map"></i> Catastro
+                </button>
+            </div>
+
             <div class="toolbar">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
@@ -962,6 +1261,7 @@
                         <option value="on-time">Al día</option>
                         <option value="warning">Próximo a finalizar</option>
                         <option value="expired">Finalizado</option>
+                        <option value="retirado">Retirado</option>
                     </select>
                 </div>
                 <button class="btn btn-primary" onclick="openTramiteModal()">
@@ -978,6 +1278,7 @@
                 </button>
                 <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)">
             </div>
+
             <div class="table-container">
                 <table>
                     <thead>
@@ -990,6 +1291,7 @@
                             <th onclick="sortTable('para')">Para <i class="fas fa-sort"></i></th>
                             <th onclick="sortTable('salida')">Salida <i class="fas fa-sort"></i></th>
                             <th>Estado</th>
+                            <th>Módulo</th>
                             <th>Notas</th>
                             <th>Foto</th>
                             <th>Acciones</th>
@@ -997,7 +1299,7 @@
                     </thead>
                     <tbody id="tableBody">
                         <tr class="empty-state">
-                            <td colspan="11">
+                            <td colspan="12">
                                 <i class="fas fa-inbox"></i>
                                 <p>No hay trámites registrados</p>
                                 <button class="btn btn-primary" onclick="openTramiteModal()" style="margin-top:12px;">
@@ -1044,8 +1346,18 @@
                 <h2 id="tramiteModalTitle">Nuevo Trámite</h2>
                 <button class="modal-close" onclick="closeTramiteModal()"><i class="fas fa-times"></i></button>
             </div>
+            <!-- Pestañas RPI / Catastro -->
+            <div class="modal-tabs" id="modalTabs">
+                <button class="active" data-modulo="rpi" onclick="cambiarModalModulo('rpi')">
+                    <i class="fas fa-building"></i> RPI
+                </button>
+                <button data-modulo="catastro" onclick="cambiarModalModulo('catastro')">
+                    <i class="fas fa-map"></i> Catastro
+                </button>
+            </div>
             <form id="tramiteForm" onsubmit="saveTramite(event)">
                 <input type="hidden" id="tramiteId">
+                <input type="hidden" id="tramiteModulo" value="rpi">
                 <div class="form-row">
                     <div class="form-group">
                         <label>Fecha *</label>
@@ -1064,9 +1376,9 @@
                         <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
                     </div>
                     <div class="form-group">
-                        <label>N° de Entrada</label>
+                        <label>N° de Entrada / Expediente</label>
                         <div style="display:flex; gap:8px;">
-                            <input type="text" id="tramiteNroEntrada" placeholder="Número de entrada" style="flex:1;">
+                            <input type="text" id="tramiteNroEntrada" placeholder="Número" style="flex:1;">
                             <button type="button" class="btn btn-sm" onclick="openOCRScanner()" title="Escanear número">
                                 <i class="fas fa-camera"></i> Escanear
                             </button>
@@ -1122,12 +1434,12 @@
     <div class="modal-overlay" id="ocrModalOverlay">
         <div class="modal">
             <div class="modal-header">
-                <h2>Escanear Número de Entrada</h2>
+                <h2>Escanear Número</h2>
                 <button class="modal-close" onclick="closeOCRScanner()"><i class="fas fa-times"></i></button>
             </div>
             <div class="ocr-scanner">
                 <video id="ocrVideo" autoplay playsinline></video>
-                <p style="color: var(--text-secondary); margin-bottom: 8px;">Apunte la cámara al número de entrada</p>
+                <p style="color: var(--text-secondary); margin-bottom: 8px;">Apunte la cámara al número</p>
                 <button class="btn btn-primary" id="ocrCaptureBtn" onclick="captureOCR()">
                     <i class="fas fa-camera"></i> Capturar y Reconocer
                 </button>
@@ -1166,6 +1478,12 @@
                         <input type="number" id="tipoTramiteUrgente" required min="1" placeholder="48">
                     </div>
                 </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="tipoTramiteCatastral">
+                        <span>Catastral (visible solo en módulo Catastro)</span>
+                    </label>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn" onclick="closeTipoTramiteModal()">Cancelar</button>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
@@ -1195,6 +1513,38 @@
         </div>
     </div>
 
+    <!-- Modal Editar Fecha Salida -->
+    <div class="modal-overlay" id="editarSalidaModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Editar Fecha de Salida</h2>
+                <button class="modal-close" onclick="closeEditarSalidaModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="editarSalidaForm" onsubmit="saveEditarSalida(event)">
+                <input type="hidden" id="editarSalidaId">
+                <div class="form-group">
+                    <label>Fecha de Salida Real</label>
+                    <input type="date" id="editarSalidaFecha" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeEditarSalidaModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Trámite -->
+    <div class="modal-overlay" id="detalleModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Detalle del Trámite</h2>
+                <button class="modal-close" onclick="closeDetalleModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="detalleContenido"></div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
@@ -1202,8 +1552,8 @@
         // ============================================
         // ALMACENAMIENTO LOCAL
         // ============================================
-        const STORAGE_KEY = 'escribania_tramites';
-        const CONFIG_KEY = 'escribania_config';
+        const STORAGE_KEY = 'escribania_tramites_v2';
+        const CONFIG_KEY = 'escribania_config_v2';
 
         function getData() {
             try {
@@ -1235,6 +1585,9 @@
         let currentPhotoData = null;
         let ocrStream = null;
         let editingTramiteId = null;
+        let moduloActual = 'rpi'; // 'rpi' o 'catastro'
+        let moduloFiltro = 'rpi'; // Filtro en la tabla
+        let tramiteExpandido = null;
 
         // ============================================
         // NAVEGACIÓN Y SIDEBAR
@@ -1244,7 +1597,7 @@
             const overlay = document.getElementById('sidebarOverlay');
             const main = document.getElementById('mainContent');
             const isOpen = !sidebar.classList.contains('closed');
-            
+
             if (isOpen) {
                 sidebar.classList.add('closed');
                 main.classList.add('expanded');
@@ -1262,31 +1615,86 @@
 
         function navigateTo(page) {
             currentPage = page;
-            
-            // Actualizar sidebar
+
             document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
             document.querySelector(`.sidebar-nav a[data-page="${page}"]`)?.classList.add('active');
-            
-            // Actualizar páginas
+
             document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
             const pageEl = document.getElementById(`page-${page}`);
             if (pageEl) pageEl.style.display = 'block';
-            
-            // Actualizar título
+
             const titles = { home: 'Inicio', tramites: 'Trámites', config: 'Configuración' };
             document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
-            
-            // Cerrar sidebar en móvil
+
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.add('closed');
                 document.getElementById('mainContent').classList.add('expanded');
                 document.getElementById('sidebarOverlay').classList.remove('active');
             }
-            
-            // Renderizar según página
-            if (page === 'home') updateStats();
-            if (page === 'tramites') { renderTable(); updateFilterOptions(); }
+
+            if (page === 'home') {
+                if (moduloActual) {
+                    document.getElementById('moduleSelector').style.display = 'none';
+                    document.getElementById('moduleDashboard').style.display = 'block';
+                    document.getElementById('moduleTitle').textContent = moduloActual.toUpperCase();
+                    updateStats();
+                } else {
+                    document.getElementById('moduleSelector').style.display = 'block';
+                    document.getElementById('moduleDashboard').style.display = 'none';
+                }
+            }
+            if (page === 'tramites') {
+                renderTable();
+                updateFilterOptions();
+                actualizarSelectorTramite();
+            }
             if (page === 'config') renderConfig();
+        }
+
+        // ============================================
+        // SELECCIÓN DE MÓDULO
+        // ============================================
+        function seleccionarModulo(modulo) {
+            moduloActual = modulo;
+            document.getElementById('moduleSelector').style.display = 'none';
+            document.getElementById('moduleDashboard').style.display = 'block';
+            document.getElementById('moduleTitle').textContent = modulo.toUpperCase();
+            updateStats();
+            showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
+        }
+
+        function volverSelector() {
+            moduloActual = null;
+            document.getElementById('moduleSelector').style.display = 'block';
+            document.getElementById('moduleDashboard').style.display = 'none';
+        }
+
+        function cambiarFiltroModulo(modulo) {
+            moduloFiltro = modulo;
+            actualizarSelectorTramite();
+            renderTable();
+        }
+
+        function actualizarSelectorTramite() {
+            const buttons = document.querySelectorAll('#tramiteSelector button');
+            buttons.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === moduloFiltro) {
+                    btn.classList.add(`active-${moduloFiltro}`);
+                }
+            });
+        }
+
+        function cambiarModalModulo(modulo) {
+            document.getElementById('tramiteModulo').value = modulo;
+            const tabs = document.querySelectorAll('#modalTabs button');
+            tabs.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === modulo) {
+                    btn.classList.add('active');
+                }
+            });
+            cargarTiposTramiteModal(modulo);
         }
 
         // ============================================
@@ -1297,11 +1705,10 @@
             const isDark = document.body.classList.contains('dark-mode');
             localStorage.setItem('darkMode', isDark);
             const icon = document.querySelector('.dark-mode-toggle i');
-            icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+            icon.className = isDark ? 'fas fa-sun' : 'fa-solid fa-moon';
             document.querySelector('.dark-mode-toggle span').textContent = isDark ? 'Modo Claro' : 'Modo Oscuro';
         }
 
-        // Cargar preferencia de modo oscuro
         if (localStorage.getItem('darkMode') === 'true') {
             document.body.classList.add('dark-mode');
             document.querySelector('.dark-mode-toggle i').className = 'fas fa-sun';
@@ -1315,10 +1722,11 @@
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-triangle-exclamation',
+                info: 'fa-circle-info' };
             toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
             container.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.style.animation = 'fadeOut 0.3s ease forwards';
                 setTimeout(() => toast.remove(), 300);
@@ -1329,55 +1737,55 @@
         // ESTADÍSTICAS
         // ============================================
         function updateStats() {
-            const tramites = getData();
+            const tramites = getData().filter(t => t.modulo === moduloActual);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             document.getElementById('statTotal').textContent = tramites.length;
-            
-            const urgentes = tramites.filter(t => t.urgencia === 'Urgente' && (!t.salida || new Date(t.salida) >= today));
+
+            const urgentes = tramites.filter(t => t.urgencia === 'Urgente' && !t.retirado);
             document.getElementById('statUrgentes').textContent = urgentes.length;
-            
-            const pendientes = tramites.filter(t => {
-                if (!t.salida) return true;
-                return new Date(t.salida) >= today;
-            });
+
+            const pendientes = tramites.filter(t => !t.retirado);
             document.getElementById('statPendientes').textContent = pendientes.length;
-            
+
             const alDia = tramites.filter(t => {
+                if (t.retirado) return false;
                 if (!t.salida) return false;
                 const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
                 return diff > 3;
             });
             document.getElementById('statAlDia').textContent = alDia.length;
-            
-            // Trámites próximos a finalizar
+
             const vencimientosList = document.getElementById('vencimientosList');
             const proximos = tramites
-                .filter(t => t.salida)
+                .filter(t => !t.retirado && t.salida)
                 .sort((a, b) => new Date(a.salida) - new Date(b.salida))
                 .slice(0, 10);
-            
+
             if (proximos.length === 0) {
                 vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>';
             } else {
                 vencimientosList.innerHTML = proximos.map(t => {
                     const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
                     let badgeClass = 'on-time';
-                    let estadoTexto = 'Al día';
-                    if (diff < 0) { 
-                        badgeClass = 'expired'; 
-                        estadoTexto = 'Finalizado'; 
-                    } else if (diff <= 3) { 
-                        badgeClass = 'warning'; 
-                        estadoTexto = 'Próximo a finalizar'; 
+                    let estadoTexto = 'Pendiente';
+                    if (t.retirado) {
+                        badgeClass = 'retirado';
+                        estadoTexto = 'Retirado';
+                    } else if (diff < 0) {
+                        badgeClass = 'expired';
+                        estadoTexto = 'Finalizado';
+                    } else if (diff <= 3) {
+                        badgeClass = 'warning';
+                        estadoTexto = 'Por Salir';
                     }
-                    
+
                     return `
-                        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
-                            <span><strong>${t.tramite}</strong> - ${t.para || 'Sin asignar'}${t.nombreCliente ? ' (' + t.nombreCliente + ')' : ''}</span>
-                            <span class="status-badge ${badgeClass}">${estadoTexto}</span>
-                        </div>`;
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
+                                <span><strong>${t.tramite}</strong> - ${t.para || 'Sin asignar'}${t.nombreCliente ? ' (' + t.nombreCliente + ')' : ''}</span>
+                                <span class="status-badge ${badgeClass}">${estadoTexto}</span>
+                            </div>`;
                 }).join('');
             }
         }
@@ -1386,33 +1794,35 @@
         // TABLA DE TRÁMITES
         // ============================================
         function getFilteredTramites() {
-            let tramites = getData();
+            let tramites = getData().filter(t => t.modulo === moduloFiltro);
             const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
             const filterTramite = document.getElementById('filterTramite')?.value || '';
             const filterEscribano = document.getElementById('filterEscribano')?.value || '';
             const filterEstado = document.getElementById('filterEstado')?.value || '';
-            
+
             if (searchTerm) {
-                tramites = tramites.filter(t => 
+                tramites = tramites.filter(t =>
                     Object.values(t).some(v => String(v).toLowerCase().includes(searchTerm))
                 );
             }
             if (filterTramite) tramites = tramites.filter(t => t.tramite === filterTramite);
             if (filterEscribano) tramites = tramites.filter(t => t.para === filterEscribano);
-            
+
             if (filterEstado) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 tramites = tramites.filter(t => {
+                    if (filterEstado === 'retirado') return t.retirado === true;
+                    if (t.retirado) return false;
                     if (!t.salida) return filterEstado === 'on-time';
                     const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
                     if (filterEstado === 'expired') return diff < 0;
                     if (filterEstado === 'warning') return diff >= 0 && diff <= 3;
                     if (filterEstado === 'on-time') return diff > 3;
+                    return true;
                 });
             }
-            
-            // Ordenar
+
             tramites.sort((a, b) => {
                 let valA = a[sortColumn] || '';
                 let valB = b[sortColumn] || '';
@@ -1424,7 +1834,7 @@
                 if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
                 return 0;
             });
-            
+
             return tramites;
         }
 
@@ -1439,65 +1849,129 @@
         }
 
         function getEstadoBadge(tramite) {
+            if (tramite.retirado) return { class: 'retirado', text: 'Retirado' };
             if (!tramite.salida) return { class: 'on-time', text: 'Pendiente' };
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const diff = Math.ceil((new Date(tramite.salida) - today) / (1000 * 60 * 60 * 24));
             if (diff < 0) return { class: 'expired', text: 'Finalizado' };
-            if (diff <= 3) return { class: 'warning', text: 'Próximo' };
-            return { class: 'on-time', text: 'Al día' };
+            if (diff <= 3) return { class: 'warning', text: 'Por Salir' };
+            return { class: 'on-time', text: 'Pendiente' };
         }
 
         function renderTable() {
             const tramites = getFilteredTramites();
             const tbody = document.getElementById('tableBody');
-            
+
             if (tramites.length === 0) {
                 tbody.innerHTML = `
-                    <tr class="empty-state">
-                        <td colspan="11">
-                            <i class="fas fa-inbox"></i>
-                            <p>No se encontraron trámites</p>
-                        </td>
-                    </tr>`;
+                        <tr class="empty-state">
+                            <td colspan="12">
+                                <i class="fas fa-inbox"></i>
+                                <p>No se encontraron trámites</p>
+                            </td>
+                        </tr>`;
                 return;
             }
-            
+
             tbody.innerHTML = tramites.map(t => {
                 const estado = getEstadoBadge(t);
                 const urgenciaClass = t.urgencia === 'Urgente' ? 'urgent-indicator' : '';
-                
+                const isChecked = t.retirado ? 'checked' : '';
+                const moduloClass = t.modulo || 'rpi';
+
                 return `
-                    <tr>
-                        <td>${t.fecha || '-'}</td>
-                        <td>${t.tramite || '-'}</td>
-                        <td>${t.nombreCliente || '-'}</td>
-                        <td>${t.nroEntrada || '-'}</td>
-                        <td class="${urgenciaClass}">${t.urgencia || 'Común'}</td>
-                        <td>${t.para || '-'}</td>
-                        <td>${t.salida || '-'}</td>
-                        <td><span class="status-badge ${estado.class}">${estado.text}</span></td>
-                        <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.notas || ''}">${t.notas || '-'}</td>
-                        <td>${t.fotoData ? `<img src="${t.fotoData}" class="photo-thumb" onclick="viewPhoto('${t.id}')" alt="Foto">` : '-'}</td>
-                        <td class="actions-cell">
-                            <button class="btn btn-sm btn-icon" onclick="openTramiteModal('${t.id}')" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTramite('${t.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`;
+                        <tr onclick="abrirDetalle('${t.id}')">
+                            <td>${t.fecha || '-'}</td>
+                            <td>${t.tramite || '-'}</td>
+                            <td>${t.nombreCliente || '-'}</td>
+                            <td>${t.nroEntrada || '-'}</td>
+                            <td class="${urgenciaClass}">${t.urgencia || 'Común'}</td>
+                            <td>${t.para || '-'}</td>
+                            <td onclick="event.stopPropagation(); openEditarSalidaModal('${t.id}')" style="cursor:pointer; color:var(--accent); text-decoration:underline;">${t.salida || '-'}</td>
+                            <td><span class="status-badge ${estado.class}">${estado.text}</span></td>
+                            <td><span class="badge-modulo ${moduloClass}">${moduloClass.toUpperCase()}</span></td>
+                            <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.notas || ''}">${t.notas || '-'}</td>
+                            <td>${t.fotoData ? `<img src="${t.fotoData}" class="photo-thumb" onclick="event.stopPropagation(); viewPhoto('${t.id}')" alt="Foto">` : '-'}</td>
+                            <td class="actions-cell" onclick="event.stopPropagation();">
+                                <input type="checkbox" ${isChecked} onchange="toggleRetirado('${t.id}', this.checked)" title="Marcar como retirado">
+                                <button class="btn btn-sm btn-icon" onclick="openTramiteModal('${t.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTramite('${t.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
             }).join('');
         }
 
+        function toggleRetirado(id, checked) {
+            let tramites = getData();
+            const tramite = tramites.find(t => t.id === id);
+            if (tramite) {
+                tramite.retirado = checked;
+                if (checked && !tramite.salidaReal) {
+                    tramite.salidaReal = new Date().toISOString().split('T')[0];
+                }
+                saveData(tramites);
+                renderTable();
+                if (moduloActual) updateStats();
+                showToast(checked ? 'Trámite marcado como retirado.' : 'Trámite desmarcado como retirado.', 'info');
+            }
+        }
+
         function updateFilterOptions() {
-            const tramites = getData();
-            const config = getConfig();
-            
+            const tramites = getData().filter(t => t.modulo === moduloFiltro);
+
             const filterTramite = document.getElementById('filterTramite');
             filterTramite.innerHTML = '<option value="">Todos los trámites</option>' +
                 [...new Set(tramites.map(t => t.tramite))].sort().map(t => `<option value="${t}">${t}</option>`).join('');
-            
+
             const filterEscribano = document.getElementById('filterEscribano');
             filterEscribano.innerHTML = '<option value="">Todos los escribanos</option>' +
-                [...new Set(tramites.map(t => t.para).filter(Boolean))].sort().map(e => `<option value="${e}">${e}</option>`).join('');
+                [...new Set(tramites.map(t => t.para).filter(Boolean))].sort().map(e => `<option value="${e}">${e}</option>`)
+                .join('');
+        }
+
+        // ============================================
+        // DETALLE DEL TRÁMITE
+        // ============================================
+        function abrirDetalle(id) {
+            const tramite = getData().find(t => t.id === id);
+            if (!tramite) return;
+
+            const modal = document.getElementById('detalleModalOverlay');
+            const contenido = document.getElementById('detalleContenido');
+
+            contenido.innerHTML = `
+                    <div class="detalle-tramite">
+                        <h4>${tramite.tramite || 'Sin tipo'}</h4>
+                        <div class="detalle-tramite-grid">
+                            <span class="label">Fecha de Ingreso:</span>
+                            <span class="value">${tramite.fecha || '-'}</span>
+                            <span class="label">N° Expediente / Entrada:</span>
+                            <span class="value">${tramite.nroEntrada || '-'}</span>
+                            <span class="label">Nombre / Cliente:</span>
+                            <span class="value">${tramite.nombreCliente || '-'}</span>
+                            <span class="label">Escribano:</span>
+                            <span class="value">${tramite.para || '-'}</span>
+                            <span class="label">Urgencia:</span>
+                            <span class="value">${tramite.urgencia || 'Común'}</span>
+                            <span class="label">Fecha de Salida:</span>
+                            <span class="value">${tramite.salida || '-'}</span>
+                            <span class="label">Módulo:</span>
+                            <span class="value"><span class="badge-modulo ${tramite.modulo || 'rpi'}">${(tramite.modulo || 'rpi').toUpperCase()}</span></span>
+                            <span class="label">Estado:</span>
+                            <span class="value"><span class="status-badge ${getEstadoBadge(tramite).class}">${getEstadoBadge(tramite).text}</span></span>
+                            <span class="label">Notas:</span>
+                            <span class="value">${tramite.notas || '-'}</span>
+                        </div>
+                        ${tramite.fotoData ? `<div style="margin-top:12px;"><img src="${tramite.fotoData}" style="max-width:200px; border-radius:8px; border:2px solid var(--border);"></div>` : ''}
+                    </div>
+                `;
+
+            modal.classList.add('active');
+        }
+
+        function closeDetalleModal() {
+            document.getElementById('detalleModalOverlay').classList.remove('active');
         }
 
         // ============================================
@@ -1508,22 +1982,36 @@
             const modal = document.getElementById('tramiteModalOverlay');
             const title = document.getElementById('tramiteModalTitle');
             const form = document.getElementById('tramiteForm');
-            
+
             form.reset();
             document.getElementById('tramiteId').value = '';
             document.getElementById('photoPreview').style.display = 'none';
             document.getElementById('removePhotoBtn').style.display = 'none';
             document.getElementById('tramiteFotoData').value = '';
             currentPhotoData = null;
-            
-            // Cargar opciones
-            loadTramiteOptions();
-            
+
+            // Módulo por defecto: el filtro actual o rpi
+            const moduloInicial = moduloFiltro || 'rpi';
+            document.getElementById('tramiteModulo').value = moduloInicial;
+
+            // Actualizar pestañas
+            const tabs = document.querySelectorAll('#modalTabs button');
+            tabs.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === moduloInicial) {
+                    btn.classList.add('active');
+                }
+            });
+
+            cargarTiposTramiteModal(moduloInicial);
+            cargarEscribanos();
+
             if (id) {
                 title.textContent = 'Editar Trámite';
                 const tramite = getData().find(t => t.id === id);
                 if (tramite) {
                     document.getElementById('tramiteId').value = tramite.id;
+                    document.getElementById('tramiteModulo').value = tramite.modulo || 'rpi';
                     document.getElementById('tramiteFecha').value = tramite.fecha || '';
                     document.getElementById('tramiteTipo').value = tramite.tramite || '';
                     document.getElementById('tramiteNombreCliente').value = tramite.nombreCliente || '';
@@ -1532,7 +2020,17 @@
                     document.getElementById('tramitePara').value = tramite.para || '';
                     document.getElementById('tramiteSalida').value = tramite.salida || '';
                     document.getElementById('tramiteNotas').value = tramite.notas || '';
-                    
+
+                    // Actualizar pestaña según módulo
+                    const mod = tramite.modulo || 'rpi';
+                    tabs.forEach(btn => {
+                        btn.className = '';
+                        if (btn.dataset.modulo === mod) {
+                            btn.classList.add('active');
+                        }
+                    });
+                    cargarTiposTramiteModal(mod);
+
                     if (tramite.fotoData) {
                         currentPhotoData = tramite.fotoData;
                         document.getElementById('photoPreview').src = tramite.fotoData;
@@ -1545,7 +2043,7 @@
                 title.textContent = 'Nuevo Trámite';
                 document.getElementById('tramiteFecha').value = new Date().toISOString().split('T')[0];
             }
-            
+
             modal.classList.add('active');
         }
 
@@ -1554,12 +2052,19 @@
             editingTramiteId = null;
         }
 
-        function loadTramiteOptions() {
+        function cargarTiposTramiteModal(modulo) {
             const config = getConfig();
             const tipoSelect = document.getElementById('tramiteTipo');
+            const opciones = config.tiposTramite.filter(t => {
+                if (modulo === 'rpi') return !t.catastral;
+                return t.catastral === true;
+            });
             tipoSelect.innerHTML = '<option value="">Seleccionar...</option>' +
-                config.tiposTramite.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
-            
+                opciones.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
+        }
+
+        function cargarEscribanos() {
+            const config = getConfig();
             const paraSelect = document.getElementById('tramitePara');
             paraSelect.innerHTML = '<option value="">Seleccionar...</option>' +
                 config.escribanos.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
@@ -1569,29 +2074,32 @@
             const tipoNombre = document.getElementById('tramiteTipo').value;
             const urgencia = document.getElementById('tramiteUrgencia').value;
             const fechaInput = document.getElementById('tramiteFecha').value;
-            
+
             if (!tipoNombre || !fechaInput) return;
-            
+
             const config = getConfig();
             const tipoTramite = config.tiposTramite.find(t => t.nombre === tipoNombre);
             if (!tipoTramite) return;
-            
+
             const fechaBase = new Date(fechaInput + 'T00:00:00');
             if (urgencia === 'Urgente') {
                 fechaBase.setHours(fechaBase.getHours() + parseInt(tipoTramite.urgente) || 48);
             } else {
                 fechaBase.setDate(fechaBase.getDate() + parseInt(tipoTramite.comun) || 15);
             }
-            
+
             document.getElementById('tramiteSalida').value = fechaBase.toISOString().split('T')[0];
         }
 
         function saveTramite(event) {
             event.preventDefault();
-            
+
             const id = document.getElementById('tramiteId').value;
+            const modulo = document.getElementById('tramiteModulo').value;
+
             const tramite = {
                 id: id || Date.now().toString(),
+                modulo: modulo,
                 fecha: document.getElementById('tramiteFecha').value,
                 tramite: document.getElementById('tramiteTipo').value,
                 nombreCliente: document.getElementById('tramiteNombreCliente').value,
@@ -1600,41 +2108,46 @@
                 para: document.getElementById('tramitePara').value,
                 salida: document.getElementById('tramiteSalida').value,
                 notas: document.getElementById('tramiteNotas').value,
-                fotoData: document.getElementById('tramiteFotoData').value || currentPhotoData || ''
+                fotoData: document.getElementById('tramiteFotoData').value || currentPhotoData || '',
+                retirado: false
             };
-            
-            // Validaciones
+
             if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente) {
                 showToast('Por favor complete los campos obligatorios (Fecha, Trámite, Nombre/Cliente y Para).', 'error');
                 return;
             }
-            
+
             let tramites = getData();
-            
+
             if (id) {
                 const index = tramites.findIndex(t => t.id === id);
-                if (index >= 0) tramites[index] = tramite;
+                if (index >= 0) {
+                    const existing = tramites[index];
+                    tramite.retirado = existing.retirado || false;
+                    tramite.salidaReal = existing.salidaReal || '';
+                    tramites[index] = tramite;
+                }
             } else {
                 tramites.unshift(tramite);
             }
-            
+
             saveData(tramites);
             closeTramiteModal();
             renderTable();
             updateFilterOptions();
-            updateStats();
+            if (moduloActual) updateStats();
             showToast(id ? 'Trámite actualizado correctamente.' : 'Trámite agregado correctamente.', 'success');
         }
 
         function deleteTramite(id) {
             if (!confirm('¿Está seguro de eliminar este trámite? Esta acción no se puede deshacer.')) return;
-            
+
             let tramites = getData();
             tramites = tramites.filter(t => t.id !== id);
             saveData(tramites);
             renderTable();
             updateFilterOptions();
-            updateStats();
+            if (moduloActual) updateStats();
             showToast('Trámite eliminado correctamente.', 'success');
         }
 
@@ -1643,6 +2156,49 @@
             if (tramite?.fotoData) {
                 const win = window.open('', '_blank');
                 win.document.write(`<img src="${tramite.fotoData}" style="max-width:100%; height:auto;">`);
+            }
+        }
+
+        // ============================================
+        // MODAL EDITAR FECHA SALIDA
+        // ============================================
+        let editingSalidaId = null;
+
+        function openEditarSalidaModal(id) {
+            const tramite = getData().find(t => t.id === id);
+            if (!tramite) return;
+
+            editingSalidaId = id;
+            document.getElementById('editarSalidaId').value = id;
+            document.getElementById('editarSalidaFecha').value = tramite.salidaReal || tramite.salida || '';
+            document.getElementById('editarSalidaModalOverlay').classList.add('active');
+        }
+
+        function closeEditarSalidaModal() {
+            document.getElementById('editarSalidaModalOverlay').classList.remove('active');
+            editingSalidaId = null;
+        }
+
+        function saveEditarSalida(event) {
+            event.preventDefault();
+            const id = document.getElementById('editarSalidaId').value;
+            const fecha = document.getElementById('editarSalidaFecha').value;
+
+            if (!fecha) {
+                showToast('Por favor seleccione una fecha.', 'error');
+                return;
+            }
+
+            let tramites = getData();
+            const tramite = tramites.find(t => t.id === id);
+            if (tramite) {
+                tramite.salidaReal = fecha;
+                tramite.salida = fecha;
+                saveData(tramites);
+                closeEditarSalidaModal();
+                renderTable();
+                if (moduloActual) updateStats();
+                showToast('Fecha de salida actualizada correctamente.', 'success');
             }
         }
 
@@ -1658,7 +2214,7 @@
         function handlePhotoSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 currentPhotoData = e.target.result;
@@ -1683,10 +2239,10 @@
         async function openOCRScanner() {
             const modal = document.getElementById('ocrModalOverlay');
             modal.classList.add('active');
-            
+
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
                 });
                 ocrStream = stream;
                 const video = document.getElementById('ocrVideo');
@@ -1710,43 +2266,42 @@
             const video = document.getElementById('ocrVideo');
             const canvas = document.getElementById('ocrCanvas');
             const resultsDiv = document.getElementById('ocrResults');
-            
+
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
-            
+
             showToast('Procesando imagen...', 'info');
-            
+
             try {
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng+spa', {
                     logger: m => console.log(m)
                 });
-                
-                // Extraer solo números (ignorar letras, símbolos)
+
                 const numeros = text.match(/\d+/g) || [];
                 const numerosUnicos = [...new Set(numeros)].filter(n => n.length >= 2);
-                
+
                 if (numerosUnicos.length === 0) {
                     resultsDiv.innerHTML = '<p style="color: var(--text-secondary);">No se detectaron números.</p>';
                     resultsDiv.style.display = 'block';
                     showToast('No se detectaron números en la imagen.', 'warning');
                     return;
                 }
-                
+
                 if (numerosUnicos.length === 1) {
                     document.getElementById('tramiteNroEntrada').value = numerosUnicos[0];
                     closeOCRScanner();
                     showToast('Número detectado: ' + numerosUnicos[0], 'success');
                 } else {
                     resultsDiv.innerHTML = `
-                        <p style="font-weight:600; margin-bottom:8px;">Seleccione el número correcto:</p>
-                        ${numerosUnicos.map(n => `
-                            <div class="ocr-result-item" onclick="selectOCRNumber('${n}')">
-                                <i class="fas fa-hashtag"></i> ${n}
-                            </div>
-                        `).join('')}
-                    `;
+                            <p style="font-weight:600; margin-bottom:8px;">Seleccione el número correcto:</p>
+                            ${numerosUnicos.map(n => `
+                                <div class="ocr-result-item" onclick="selectOCRNumber('${n}')">
+                                    <i class="fas fa-hashtag"></i> ${n}
+                                </div>
+                            `).join('')}
+                        `;
                     resultsDiv.style.display = 'block';
                 }
             } catch (err) {
@@ -1766,52 +2321,51 @@
         // ============================================
         function renderConfig() {
             const config = getConfig();
-            
-            // Tipos de trámite
+
             const tiposList = document.getElementById('tiposTramiteList');
             if (config.tiposTramite.length === 0) {
                 tiposList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay tipos de trámite configurados.</li>';
             } else {
                 tiposList.innerHTML = config.tiposTramite.map((t, i) => `
-                    <li>
-                        <div class="item-info">
-                            <strong>${t.nombre}</strong>
-                            ${t.formulario ? `<span style="color:var(--text-secondary);"> (Form. ${t.formulario})</span>` : ''}
-                            <br><small>Común: ${t.comun} días | Urgente: ${t.urgente} horas</small>
-                        </div>
-                        <div class="item-actions">
-                            <button class="btn btn-sm btn-icon" onclick="openTipoTramiteModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTipoTramite(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </li>
-                `).join('');
+                        <li>
+                            <div class="item-info">
+                                <strong>${t.nombre}</strong>
+                                ${t.formulario ? `<span style="color:var(--text-secondary);"> (Form. ${t.formulario})</span>` : ''}
+                                <br><small>Común: ${t.comun} días | Urgente: ${t.urgente} horas</small>
+                                <br><span class="badge-modulo ${t.catastral ? 'catastro' : 'rpi'}">${t.catastral ? 'Catastro' : 'RPI'}</span>
+                            </div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-icon" onclick="openTipoTramiteModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTipoTramite(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </li>
+                    `).join('');
             }
-            
-            // Escribanos
+
             const escribanosList = document.getElementById('escribanosList');
             if (config.escribanos.length === 0) {
                 escribanosList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay escribanos configurados.</li>';
             } else {
                 escribanosList.innerHTML = config.escribanos.map((e, i) => `
-                    <li>
-                        <div class="item-info"><strong>${e.nombre}</strong></div>
-                        <div class="item-actions">
-                            <button class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEscribano(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </li>
-                `).join('');
+                        <li>
+                            <div class="item-info"><strong>${e.nombre}</strong></div>
+                            <div class="item-actions">
+                                <button class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEscribano(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </li>
+                    `).join('');
             }
         }
 
-        // Modal Tipo de Trámite
         function openTipoTramiteModal(index = null) {
             const modal = document.getElementById('tipoTramiteModalOverlay');
             const title = document.getElementById('tipoTramiteModalTitle');
             const form = document.getElementById('tipoTramiteForm');
             form.reset();
             document.getElementById('tipoTramiteId').value = '';
-            
+            document.getElementById('tipoTramiteCatastral').checked = false;
+
             if (index !== null && index >= 0) {
                 title.textContent = 'Editar Tipo de Trámite';
                 const config = getConfig();
@@ -1822,11 +2376,12 @@
                     document.getElementById('tipoTramiteFormulario').value = tipo.formulario || '';
                     document.getElementById('tipoTramiteComun').value = tipo.comun;
                     document.getElementById('tipoTramiteUrgente').value = tipo.urgente;
+                    document.getElementById('tipoTramiteCatastral').checked = tipo.catastral || false;
                 }
             } else {
                 title.textContent = 'Nuevo Tipo de Trámite';
             }
-            
+
             modal.classList.add('active');
         }
 
@@ -1841,29 +2396,30 @@
                 nombre: document.getElementById('tipoTramiteNombre').value.trim(),
                 formulario: document.getElementById('tipoTramiteFormulario').value.trim(),
                 comun: parseInt(document.getElementById('tipoTramiteComun').value) || 15,
-                urgente: parseInt(document.getElementById('tipoTramiteUrgente').value) || 48
+                urgente: parseInt(document.getElementById('tipoTramiteUrgente').value) || 48,
+                catastral: document.getElementById('tipoTramiteCatastral').checked
             };
-            
+
             if (!tipo.nombre) {
                 showToast('El nombre del trámite es obligatorio.', 'error');
                 return;
             }
-            
+
             const config = getConfig();
-            
-            // Verificar duplicados
-            const duplicate = config.tiposTramite.find((t, i) => t.nombre.toLowerCase() === tipo.nombre.toLowerCase() && i !== parseInt(index));
+
+            const duplicate = config.tiposTramite.find((t, i) => t.nombre.toLowerCase() === tipo.nombre.toLowerCase() && i !==
+                parseInt(index));
             if (duplicate) {
                 showToast('Ya existe un tipo de trámite con ese nombre.', 'warning');
                 return;
             }
-            
+
             if (index !== '' && index >= 0) {
                 config.tiposTramite[index] = tipo;
             } else {
                 config.tiposTramite.push(tipo);
             }
-            
+
             saveConfig(config);
             closeTipoTramiteModal();
             renderConfig();
@@ -1879,14 +2435,13 @@
             showToast('Tipo de trámite eliminado.', 'success');
         }
 
-        // Modal Escribano
         function openEscribanoModal(index = null) {
             const modal = document.getElementById('escribanoModalOverlay');
             const title = document.getElementById('escribanoModalTitle');
             const form = document.getElementById('escribanoForm');
             form.reset();
             document.getElementById('escribanoId').value = '';
-            
+
             if (index !== null && index >= 0) {
                 title.textContent = 'Editar Escribano';
                 const config = getConfig();
@@ -1898,7 +2453,7 @@
             } else {
                 title.textContent = 'Nuevo Escribano';
             }
-            
+
             modal.classList.add('active');
         }
 
@@ -1910,27 +2465,28 @@
             event.preventDefault();
             const index = document.getElementById('escribanoId').value;
             const nombre = document.getElementById('escribanoNombre').value.trim();
-            
+
             if (!nombre) {
                 showToast('El nombre del escribano es obligatorio.', 'error');
                 return;
             }
-            
+
             const config = getConfig();
-            const duplicate = config.escribanos.find((e, i) => e.nombre.toLowerCase() === nombre.toLowerCase() && i !== parseInt(index));
+            const duplicate = config.escribanos.find((e, i) => e.nombre.toLowerCase() === nombre.toLowerCase() && i !== parseInt(
+                index));
             if (duplicate) {
                 showToast('Ya existe un escribano con ese nombre.', 'warning');
                 return;
             }
-            
+
             const escribano = { nombre };
-            
+
             if (index !== '' && index >= 0) {
                 config.escribanos[index] = escribano;
             } else {
                 config.escribanos.push(escribano);
             }
-            
+
             saveConfig(config);
             closeEscribanoModal();
             renderConfig();
@@ -1955,38 +2511,44 @@
                 Fecha: t.fecha,
                 Trámite: t.tramite,
                 'Nombre / Cliente': t.nombreCliente,
-                'N° Entrada': t.nroEntrada,
+                'N° Entrada / Expediente': t.nroEntrada,
                 Urgencia: t.urgencia,
                 Para: t.para,
                 Salida: t.salida,
-                Notas: t.notas
+                Notas: t.notas,
+                Módulo: t.modulo || 'RPI',
+                Retirado: t.retirado ? 'Sí' : 'No'
             }));
-            
+
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Trámites');
-            XLSX.writeFile(wb, 'tramites_escribania.xlsx');
+            XLSX.writeFile(wb, `tramites_${moduloFiltro}.xlsx`);
             showToast('Exportado a Excel correctamente.', 'success');
         }
 
         function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('landscape');
-            
+
             const tramites = getFilteredTramites();
             const rows = tramites.map(t => [
-                t.fecha, t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para, 
-                t.salida, t.notas || ''
+                t.fecha, t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para,
+                t.salida, t.notas || '', t.modulo || 'RPI', t.retirado ? 'Retirado' : 'Pendiente'
             ]);
-            
+
             doc.autoTable({
-                head: [['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Para', 'Salida', 'Notas']],
+                head: [
+                    ['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Para', 'Salida', 'Notas', 'Módulo',
+                        'Estado'
+                    ]
+                ],
                 body: rows,
-                styles: { fontSize: 8 },
+                styles: { fontSize: 7 },
                 headStyles: { fillColor: [91, 127, 149] }
             });
-            
-            doc.save('tramites_escribania.pdf');
+
+            doc.save(`tramites_${moduloFiltro}.pdf`);
             showToast('Exportado a PDF correctamente.', 'success');
         }
 
@@ -1997,7 +2559,7 @@
         function handleImportFile(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -2005,32 +2567,37 @@
                     const workbook = XLSX.read(data, { type: 'array' });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(sheet);
-                    
+
                     let tramites = getData();
                     let count = 0;
-                    
+
                     jsonData.forEach(row => {
                         if (row['Trámite'] || row['tramite']) {
+                            const modulo = row['Módulo'] || row['modulo'] || moduloFiltro || 'rpi';
                             tramites.unshift({
                                 id: Date.now().toString() + Math.random(),
+                                modulo: modulo.toLowerCase(),
                                 fecha: row['Fecha'] || row['fecha'] || '',
                                 tramite: row['Trámite'] || row['tramite'] || '',
-                                nombreCliente: row['Nombre / Cliente'] || row['nombreCliente'] || row['Nombre/Cliente'] || '',
-                                nroEntrada: row['N° Entrada'] || row['nroEntrada'] || '',
+                                nombreCliente: row['Nombre / Cliente'] || row['nombreCliente'] || row[
+                                    'Nombre/Cliente'] || '',
+                                nroEntrada: row['N° Entrada / Expediente'] || row['nroEntrada'] || row[
+                                    'N° Entrada'] || '',
                                 urgencia: row['Urgencia'] || row['urgencia'] || 'Común',
                                 para: row['Para'] || row['para'] || '',
                                 salida: row['Salida'] || row['salida'] || '',
                                 notas: row['Notas'] || row['notas'] || '',
-                                fotoData: ''
+                                fotoData: '',
+                                retirado: false
                             });
                             count++;
                         }
                     });
-                    
+
                     saveData(tramites);
                     renderTable();
                     updateFilterOptions();
-                    updateStats();
+                    if (moduloActual) updateStats();
                     showToast(`Importados ${count} trámites correctamente.`, 'success');
                 } catch (err) {
                     showToast('Error al importar el archivo.', 'error');
@@ -2045,10 +2612,10 @@
             const data = {
                 tramites: getData(),
                 config: getConfig(),
-                version: '1.0',
+                version: '2.0',
                 fecha: new Date().toISOString()
             };
-            
+
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2062,12 +2629,12 @@
         function handleRestoreBackup(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+
             if (!confirm('¿Restaurar backup? Los datos actuales serán reemplazados.')) {
                 event.target.value = '';
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -2077,7 +2644,7 @@
                         saveConfig(data.config);
                         renderTable();
                         updateFilterOptions();
-                        updateStats();
+                        if (moduloActual) updateStats();
                         renderConfig();
                         showToast('Backup restaurado correctamente.', 'success');
                     } else {
@@ -2100,10 +2667,11 @@
                 closeOCRScanner();
                 closeTipoTramiteModal();
                 closeEscribanoModal();
+                closeEditarSalidaModal();
+                closeDetalleModal();
             }
         });
 
-        // Cerrar modales al hacer clic fuera
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', function(e) {
                 if (e.target === this) {
@@ -2111,6 +2679,8 @@
                     if (this.id === 'ocrModalOverlay') closeOCRScanner();
                     if (this.id === 'tipoTramiteModalOverlay') closeTipoTramiteModal();
                     if (this.id === 'escribanoModalOverlay') closeEscribanoModal();
+                    if (this.id === 'editarSalidaModalOverlay') closeEditarSalidaModal();
+                    if (this.id === 'detalleModalOverlay') closeDetalleModal();
                 }
             });
         });
@@ -2119,31 +2689,26 @@
         // INICIALIZACIÓN
         // ============================================
         function init() {
-            // Asegurar que exista la estructura de configuración
             if (!localStorage.getItem(CONFIG_KEY)) {
                 saveConfig({ tiposTramite: [], escribanos: [] });
             }
-            
-            // Cargar página inicial
+
+            // Configurar selector de módulo en trámites
+            actualizarSelectorTramite();
+
+            // Sidebar cerrado por defecto
+            document.getElementById('sidebar').classList.add('closed');
+            document.getElementById('mainContent').classList.add('expanded');
+
             navigateTo('home');
-            
-            // Configurar sidebar responsive
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.add('closed');
-                document.getElementById('mainContent').classList.add('expanded');
-            }
         }
 
-        // Evento resize
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
                 document.getElementById('sidebarOverlay').classList.remove('active');
-                document.getElementById('sidebar').classList.remove('closed');
-                document.getElementById('mainContent').classList.remove('expanded');
             }
         });
 
-        // Iniciar aplicación
         init();
     </script>
 </body>
