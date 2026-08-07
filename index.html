@@ -1036,6 +1036,92 @@
             color: var(--text-primary);
         }
 
+        /* Estilos para la lista de vencimientos */
+        .vencimiento-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .vencimiento-item:hover {
+            background: var(--hover-row);
+            margin: 0 -8px;
+            padding-left: 8px;
+            padding-right: 8px;
+            border-radius: 6px;
+        }
+
+        .vencimiento-item .vencimiento-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .vencimiento-item .vencimiento-info .nombre {
+            font-weight: 600;
+        }
+
+        .vencimiento-item .vencimiento-info .detalle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .vencimiento-item .vencimiento-estado {
+            flex-shrink: 0;
+        }
+
+        .vencimiento-detalle-expandido {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 4px 0 8px 0;
+            border-left: 3px solid var(--accent);
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .vencimiento-detalle-expandido.mostrar {
+            display: block;
+        }
+
+        .vencimiento-detalle-expandido .detalle-row {
+            display: flex;
+            gap: 8px;
+            padding: 2px 0;
+        }
+
+        .vencimiento-detalle-expandido .detalle-row .detalle-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 140px;
+        }
+
+        /* Buscador en vencimientos */
+        .vencimiento-buscador {
+            margin-bottom: 12px;
+        }
+
+        .vencimiento-buscador input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .vencimiento-buscador input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -1103,6 +1189,14 @@
             .detalle-tramite-grid {
                 grid-template-columns: 1fr;
                 gap: 4px;
+            }
+
+            .vencimiento-item {
+                flex-wrap: wrap;
+            }
+
+            .vencimiento-item .vencimiento-estado {
+                margin-top: 4px;
             }
         }
 
@@ -1225,7 +1319,10 @@
 
                 <div class="config-section">
                     <h3><i class="fas fa-chart-simple"></i> Trámites próximos a finalizar</h3>
-                    <div id="vencimientosList" style="max-height: 300px; overflow-y: auto;">
+                    <div class="vencimiento-buscador">
+                        <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
+                    </div>
+                    <div id="vencimientosList" style="max-height: 400px; overflow-y: auto;">
                         <p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>
                     </div>
                 </div>
@@ -1585,9 +1682,10 @@
         let currentPhotoData = null;
         let ocrStream = null;
         let editingTramiteId = null;
-        let moduloActual = 'rpi'; // 'rpi' o 'catastro'
+        let moduloActual = null; // Cambiado a null para que no seleccione automáticamente
         let moduloFiltro = 'rpi'; // Filtro en la tabla
         let tramiteExpandido = null;
+        let vencimientoExpandido = null;
 
         // ============================================
         // NAVEGACIÓN Y SIDEBAR
@@ -1659,6 +1757,8 @@
             document.getElementById('moduleSelector').style.display = 'none';
             document.getElementById('moduleDashboard').style.display = 'block';
             document.getElementById('moduleTitle').textContent = modulo.toUpperCase();
+            // Resetear el buscador de vencimientos al cambiar de módulo
+            document.getElementById('vencimientoSearchInput').value = '';
             updateStats();
             showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
         }
@@ -1757,37 +1857,92 @@
             });
             document.getElementById('statAlDia').textContent = alDia.length;
 
-            const vencimientosList = document.getElementById('vencimientosList');
-            const proximos = tramites
+            renderVencimientos();
+        }
+
+        // ============================================
+        // VENCIMIENTOS CON BUSCADOR Y EXPANSIÓN
+        // ============================================
+        function renderVencimientos() {
+            const tramites = getData().filter(t => t.modulo === moduloActual);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const searchTerm = document.getElementById('vencimientoSearchInput')?.value?.toLowerCase() || '';
+
+            let proximos = tramites
                 .filter(t => !t.retirado && t.salida)
                 .sort((a, b) => new Date(a.salida) - new Date(b.salida))
                 .slice(0, 10);
 
+            // Filtrar por búsqueda
+            if (searchTerm) {
+                proximos = proximos.filter(t =>
+                    (t.nombreCliente && t.nombreCliente.toLowerCase().includes(searchTerm)) ||
+                    (t.nroEntrada && t.nroEntrada.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            const vencimientosList = document.getElementById('vencimientosList');
+
             if (proximos.length === 0) {
                 vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>';
-            } else {
-                vencimientosList.innerHTML = proximos.map(t => {
-                    const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
-                    let badgeClass = 'on-time';
-                    let estadoTexto = 'Pendiente';
-                    if (t.retirado) {
-                        badgeClass = 'retirado';
-                        estadoTexto = 'Retirado';
-                    } else if (diff < 0) {
-                        badgeClass = 'expired';
-                        estadoTexto = 'Finalizado';
-                    } else if (diff <= 3) {
-                        badgeClass = 'warning';
-                        estadoTexto = 'Por Salir';
-                    }
-
-                    return `
-                            <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
-                                <span><strong>${t.tramite}</strong> - ${t.para || 'Sin asignar'}${t.nombreCliente ? ' (' + t.nombreCliente + ')' : ''}</span>
-                                <span class="status-badge ${badgeClass}">${estadoTexto}</span>
-                            </div>`;
-                }).join('');
+                return;
             }
+
+            vencimientosList.innerHTML = proximos.map(t => {
+                const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
+                let badgeClass = 'on-time';
+                let estadoTexto = 'Pendiente';
+                if (t.retirado) {
+                    badgeClass = 'retirado';
+                    estadoTexto = 'Retirado';
+                } else if (diff < 0) {
+                    badgeClass = 'expired';
+                    estadoTexto = 'Finalizado';
+                } else if (diff <= 3) {
+                    badgeClass = 'warning';
+                    estadoTexto = 'Por Salir';
+                }
+
+                const isExpanded = vencimientoExpandido === t.id;
+
+                return `
+                        <div>
+                            <div class="vencimiento-item" onclick="toggleVencimientoDetalle('${t.id}')">
+                                <div class="vencimiento-info">
+                                    <span class="nombre">${t.tramite || 'Sin tipo'}</span>
+                                    <span class="detalle">${t.para || 'Sin asignar'} ${t.nombreCliente ? ' - ' + t.nombreCliente : ''}</span>
+                                </div>
+                                <div class="vencimiento-estado">
+                                    <span class="status-badge ${badgeClass}">${estadoTexto}</span>
+                                </div>
+                            </div>
+                            <div class="vencimiento-detalle-expandido ${isExpanded ? 'mostrar' : ''}" id="vencimiento-detalle-${t.id}">
+                                <div class="detalle-row">
+                                    <span class="detalle-label">Fecha de presentación:</span>
+                                    <span>${t.fecha || 'No registrada'}</span>
+                                </div>
+                                <div class="detalle-row">
+                                    <span class="detalle-label">Número de expediente:</span>
+                                    <span>${t.nroEntrada || 'No registrado'}</span>
+                                </div>
+                                <div class="detalle-row">
+                                    <span class="detalle-label">Fecha de salida estimada:</span>
+                                    <span>${t.salida || 'No registrada'}</span>
+                                </div>
+                            </div>
+                        </div>`;
+            }).join('');
+        }
+
+        function toggleVencimientoDetalle(id) {
+            if (vencimientoExpandido === id) {
+                vencimientoExpandido = null;
+            } else {
+                vencimientoExpandido = id;
+            }
+            renderVencimientos();
         }
 
         // ============================================
