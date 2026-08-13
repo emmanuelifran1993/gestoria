@@ -1136,12 +1136,12 @@
                 </div>
 
                 <div class="config-section">
-                    <h3><i class="fas fa-chart-simple"></i> Trámites próximos a finalizar</h3>
+                    <h3><i class="fas fa-chart-simple"></i> Trámites</h3>
                     <div class="vencimiento-buscador">
                         <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
                     </div>
                     <div id="vencimientosList" style="max-height:400px; overflow-y:auto;">
-                        <p style="color:var(--text-secondary);">No hay trámites próximos a finalizar.</p>
+                        <p style="color:var(--text-secondary);">No hay trámites registrados.</p>
                     </div>
                 </div>
             </div>
@@ -1451,7 +1451,7 @@
         //  1.  CONFIGURACIÓN DE SUPABASE  (cambiar aquí con tus credenciales)
         // ================================================================
         const SUPABASE_URL = 'https://bmjhbsqecppgyesgomxh.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
+        const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
         // Crear el cliente una sola vez
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -1856,10 +1856,22 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
             const titles = { home: 'Inicio', tramites: 'Trámites', config: 'Configuración' };
             document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
 
-            if (window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.add('closed');
-                document.getElementById('mainContent').classList.add('expanded');
-                document.getElementById('sidebarOverlay').classList.remove('active');
+            // Cerrar menú automáticamente en ordenador al seleccionar opción
+            if (window.innerWidth > 768) {
+                const sidebar = document.getElementById('sidebar');
+                const main = document.getElementById('mainContent');
+                if (!sidebar.classList.contains('closed')) {
+                    sidebar.classList.add('closed');
+                    main.classList.add('expanded');
+                }
+            } else {
+                // En móvil, si el overlay está activo, lo cerramos
+                const overlay = document.getElementById('sidebarOverlay');
+                if (overlay.classList.contains('active')) {
+                    overlay.classList.remove('active');
+                    document.getElementById('sidebar').classList.add('closed');
+                    document.getElementById('mainContent').classList.add('expanded');
+                }
             }
 
             if (page === 'home') {
@@ -1983,48 +1995,53 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
             renderVencimientos();
         }
 
-        // 5.6 Vencimientos
+        // 5.6 Vencimientos (NUEVO: muestra todos los trámites del módulo, ordenados por fecha descendente)
         function renderVencimientos() {
             const tramites = getData().filter(t => t.modulo === moduloActual);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+
+            // Ordenar por fecha descendente (más reciente primero)
+            const tramitesOrdenados = [...tramites].sort((a, b) => {
+                const fechaA = a.fecha ? new Date(a.fecha) : new Date(0);
+                const fechaB = b.fecha ? new Date(b.fecha) : new Date(0);
+                return fechaB - fechaA;
+            });
 
             const searchTerm = document.getElementById('vencimientoSearchInput')?.value?.toLowerCase() || '';
 
-            let proximos = tramites
-                .filter(t => !t.retirado && t.salida)
-                .sort((a, b) => new Date(a.salida) - new Date(b.salida))
-                .slice(0, 10);
-
+            let tramitesFiltrados = tramitesOrdenados;
             if (searchTerm) {
-                proximos = proximos.filter(t =>
+                tramitesFiltrados = tramitesFiltrados.filter(t =>
                     (t.nombreCliente && t.nombreCliente.toLowerCase().includes(searchTerm)) ||
-                    (t.nroEntrada && t.nroEntrada.toLowerCase().includes(searchTerm))
+                    (t.nroEntrada && t.nroEntrada.toLowerCase().includes(searchTerm)) ||
+                    (t.tramite && t.tramite.toLowerCase().includes(searchTerm))
                 );
             }
 
             const vencimientosList = document.getElementById('vencimientosList');
 
-            if (proximos.length === 0) {
-                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites próximos a finalizar.</p>';
+            if (tramitesFiltrados.length === 0) {
+                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites registrados.</p>';
                 return;
             }
 
-            vencimientosList.innerHTML = proximos.map(t => {
-                const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
-                let badgeClass = 'on-time';
-                let estadoTexto = 'Pendiente';
-                if (t.retirado) {
-                    badgeClass = 'retirado';
-                    estadoTexto = 'Retirado';
-                } else if (diff < 0) {
-                    badgeClass = 'expired';
-                    estadoTexto = 'Finalizado';
-                } else if (diff <= 3) {
-                    badgeClass = 'warning';
-                    estadoTexto = 'Por Salir';
+            // Función auxiliar para formatear fecha a DD MMM YYYY (solo visual)
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
                 }
+            }
 
+            vencimientosList.innerHTML = tramitesFiltrados.map(t => {
+                const estado = getEstadoBadge(t);
                 const isExpanded = vencimientoExpandido === t.id;
 
                 return `
@@ -2035,13 +2052,13 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
                                         <span class="detalle">${t.para || 'Sin asignar'} ${t.nombreCliente ? ' - ' + t.nombreCliente : ''}</span>
                                     </div>
                                     <div class="vencimiento-estado">
-                                        <span class="status-badge ${badgeClass}">${estadoTexto}</span>
+                                        <span class="status-badge ${estado.class}">${estado.text}</span>
                                     </div>
                                 </div>
                                 <div class="vencimiento-detalle-expandido ${isExpanded ? 'mostrar' : ''}" id="vencimiento-detalle-${t.id}">
                                     <div class="detalle-row">
                                         <span class="detalle-label">Fecha de presentación:</span>
-                                        <span>${t.fecha || 'No registrada'}</span>
+                                        <span>${formatearFechaVisual(t.fecha)}</span>
                                     </div>
                                     <div class="detalle-row">
                                         <span class="detalle-label">Número de expediente:</span>
@@ -2049,7 +2066,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
                                     </div>
                                     <div class="detalle-row">
                                         <span class="detalle-label">Fecha de salida estimada:</span>
-                                        <span>${t.salida || 'No registrada'}</span>
+                                        <span>${formatearFechaVisual(t.salida)}</span>
                                     </div>
                                 </div>
                             </div>`;
@@ -2136,6 +2153,22 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
             const tramites = getFilteredTramites();
             const tbody = document.getElementById('tableBody');
 
+            // Función auxiliar para formatear fecha a DD MMM YYYY (solo visual)
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
             if (tramites.length === 0) {
                 tbody.innerHTML = `
                             <tr class="empty-state">
@@ -2155,13 +2188,13 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
 
                 return `
                             <tr onclick="abrirDetalle('${t.id}')">
-                                <td>${t.fecha || '-'}</td>
+                                <td>${formatearFechaVisual(t.fecha)}</td>
                                 <td>${t.tramite || '-'}</td>
                                 <td>${t.nombreCliente || '-'}</td>
                                 <td>${t.nroEntrada || '-'}</td>
                                 <td class="${urgenciaClass}">${t.urgencia || 'Común'}</td>
                                 <td>${t.para || '-'}</td>
-                                <td onclick="event.stopPropagation(); openEditarSalidaModal('${t.id}')" style="cursor:pointer; color:var(--accent); text-decoration:underline;">${t.salida || '-'}</td>
+                                <td onclick="event.stopPropagation(); openEditarSalidaModal('${t.id}')" style="cursor:pointer; color:var(--accent); text-decoration:underline;">${formatearFechaVisual(t.salida)}</td>
                                 <td><span class="status-badge ${estado.class}">${estado.text}</span></td>
                                 <td><span class="badge-modulo ${moduloClass}">${moduloClass.toUpperCase()}</span></td>
                                 <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.notas || ''}">${t.notas || '-'}</td>
@@ -2215,12 +2248,28 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
             const modal = document.getElementById('detalleModalOverlay');
             const contenido = document.getElementById('detalleContenido');
 
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
             contenido.innerHTML = `
                         <div class="detalle-tramite">
                             <h4>${tramite.tramite || 'Sin tipo'}</h4>
                             <div class="detalle-tramite-grid">
                                 <span class="label">Fecha de Ingreso:</span>
-                                <span class="value">${tramite.fecha || '-'}</span>
+                                <span class="value">${formatearFechaVisual(tramite.fecha)}</span>
                                 <span class="label">N° Expediente / Entrada:</span>
                                 <span class="value">${tramite.nroEntrada || '-'}</span>
                                 <span class="label">Nombre / Cliente:</span>
@@ -2230,7 +2279,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
                                 <span class="label">Urgencia:</span>
                                 <span class="value">${tramite.urgencia || 'Común'}</span>
                                 <span class="label">Fecha de Salida:</span>
-                                <span class="value">${tramite.salida || '-'}</span>
+                                <span class="value">${formatearFechaVisual(tramite.salida)}</span>
                                 <span class="label">Módulo:</span>
                                 <span class="value"><span class="badge-modulo ${tramite.modulo || 'rpi'}">${(tramite.modulo || 'rpi').toUpperCase()}</span></span>
                                 <span class="label">Estado:</span>
@@ -2797,14 +2846,30 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
         // 5.14 Exportar / Importar
         function exportToExcel() {
             const tramites = getFilteredTramites();
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
             const data = tramites.map(t => ({
-                Fecha: t.fecha,
+                Fecha: formatearFechaVisual(t.fecha),
                 Trámite: t.tramite,
                 'Nombre / Cliente': t.nombreCliente,
                 'N° Entrada / Expediente': t.nroEntrada,
                 Urgencia: t.urgencia,
                 Para: t.para,
-                Salida: t.salida,
+                Salida: formatearFechaVisual(t.salida),
                 Notas: t.notas,
                 Módulo: t.modulo || 'RPI',
                 Retirado: t.retirado ? 'Sí' : 'No'
@@ -2822,9 +2887,25 @@ const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
             const doc = new jsPDF('landscape');
 
             const tramites = getFilteredTramites();
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
             const rows = tramites.map(t => [
-                t.fecha, t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para,
-                t.salida, t.notas || '', t.modulo || 'RPI', t.retirado ? 'Retirado' : 'Pendiente'
+                formatearFechaVisual(t.fecha), t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para,
+                formatearFechaVisual(t.salida), t.notas || '', t.modulo || 'RPI', t.retirado ? 'Retirado' : 'Pendiente'
             ]);
 
             doc.autoTable({
