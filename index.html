@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestión de Trámites - Escribanía</title>
 
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#5b7f95" />
+    <meta name="description" content="Sistema de gestión de trámites para escribanía con soporte offline" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Gestoría" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
@@ -1051,9 +1061,56 @@
                 font-size: 0.8rem;
             }
         }
+
+        /* ====== PWA / OFFLINE ====== */
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            background: var(--warning);
+            color: #fff;
+            padding: 10px 16px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .offline-banner.hidden {
+            display: none;
+        }
+
+        .offline-banner i {
+            font-size: 1rem;
+        }
+
+        .pending-sync-badge {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        body.has-offline-banner {
+            padding-top: 44px;
+        }
     </style>
 </head>
 <body>
+
+    <!-- Banner offline -->
+    <div id="offlineBanner" class="offline-banner hidden" role="status" aria-live="polite">
+        <i class="fas fa-wifi-slash" aria-hidden="true"></i>
+        <span>Estás sin conexión. Los datos se guardarán localmente.</span>
+        <span id="pendingSyncCount" class="pending-sync-badge" style="display:none;"></span>
+    </div>
 
     <!-- ====== SIDEBAR ====== -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -1456,29 +1513,219 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ================================================================
-        //  2.  FUNCIONES DE ALMACENAMIENTO (reemplazan localStorage)
+        //  2.  PWA / OFFLINE – Caché local y cola de sincronización
         // ================================================================
+        const PWA_TRAMITES_CACHE = 'pwa_tramites_cache_v1';
+        const PWA_CONFIG_CACHE = 'pwa_config_cache_v1';
+        const PWA_SYNC_QUEUE = 'pwa_sync_queue_v1';
 
-        // ---- 2.a  TRÁMITES ----
+        let syncInProgress = false;
 
-        /**
-         * Obtiene todos los trámites desde Supabase.
-         * Devuelve un array con los objetos en el formato interno (camelCase).
-         */
-        async function getTramites() {
-            const { data, error } = await supabaseClient
-                .from('tramites')
-                .select('*')
-                .order('fecha', { ascending: false });
+        function isAppOnline() {
+            return navigator.onLine;
+        }
 
-            if (error) {
-                console.error('Error al obtener trámites:', error);
-                showToast('Error al cargar los trámites desde la base de datos.', 'error');
+        function loadTramitesFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(PWA_TRAMITES_CACHE);
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistTramitesCache(tramites) {
+            try {
+                localStorage.setItem(PWA_TRAMITES_CACHE, JSON.stringify(tramites));
+            } catch (e) {
+                console.warn('No se pudo guardar caché de trámites:', e);
+            }
+        }
+
+        function loadConfigFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(PWA_CONFIG_CACHE);
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistConfigCache(config) {
+            try {
+                localStorage.setItem(PWA_CONFIG_CACHE, JSON.stringify(config));
+            } catch (e) {
+                console.warn('No se pudo guardar caché de configuración:', e);
+            }
+        }
+
+        function getSyncQueue() {
+            try {
+                return JSON.parse(localStorage.getItem(PWA_SYNC_QUEUE) || '[]');
+            } catch {
                 return [];
             }
+        }
 
-            // Convertir snake_case (BD) a camelCase (app)
-            return data.map(row => ({
+        function saveSyncQueue(queue) {
+            localStorage.setItem(PWA_SYNC_QUEUE, JSON.stringify(queue));
+        }
+
+        function enqueueSync(operation) {
+            let queue = getSyncQueue();
+            const op = {
+                ...operation,
+                queueId: operation.queueId || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                timestamp: Date.now()
+            };
+
+            if (op.type === 'upsert_tramite') {
+                queue = queue.filter(q => !(q.type === 'upsert_tramite' && q.payload.id === op.payload.id));
+                queue = queue.filter(q => !(q.type === 'delete_tramite' && q.payload.id === op.payload.id));
+            }
+            if (op.type === 'delete_tramite') {
+                queue = queue.filter(q => !(q.type === 'upsert_tramite' && q.payload.id === op.payload.id));
+                queue = queue.filter(q => !(q.type === 'delete_tramite' && q.payload.id === op.payload.id));
+            }
+            if (op.type === 'save_config') {
+                queue = queue.filter(q => q.type !== 'save_config');
+            }
+
+            queue.push(op);
+            saveSyncQueue(queue);
+            updatePendingSyncBadge();
+        }
+
+        function removeSyncOperation(queueId) {
+            saveSyncQueue(getSyncQueue().filter(q => q.queueId !== queueId));
+            updatePendingSyncBadge();
+        }
+
+        function updateOfflineBanner() {
+            const banner = document.getElementById('offlineBanner');
+            if (!banner) return;
+            const offline = !isAppOnline();
+            banner.classList.toggle('hidden', !offline);
+            document.body.classList.toggle('has-offline-banner', offline);
+        }
+
+        function updatePendingSyncBadge() {
+            const badge = document.getElementById('pendingSyncCount');
+            if (!badge) return;
+            const count = getSyncQueue().length;
+            if (count > 0) {
+                badge.textContent = `${count} cambio${count !== 1 ? 's' : ''} pendiente${count !== 1 ? 's' : ''}`;
+                badge.style.display = 'inline';
+            } else {
+                badge.textContent = '';
+                badge.style.display = 'none';
+            }
+        }
+
+        async function processSyncQueue() {
+            if (syncInProgress || !isAppOnline() || getSyncQueue().length === 0) return;
+
+            syncInProgress = true;
+            const queue = getSyncQueue();
+            let processed = 0;
+
+            for (const op of queue) {
+                try {
+                    switch (op.type) {
+                        case 'upsert_tramite':
+                            await upsertTramiteRemote(op.payload);
+                            break;
+                        case 'delete_tramite':
+                            await deleteTramiteRemote(op.payload.id);
+                            break;
+                        case 'save_config':
+                            await saveConfigSupabaseRemote(op.payload);
+                            break;
+                        default:
+                            break;
+                    }
+                    removeSyncOperation(op.queueId);
+                    processed++;
+                } catch (error) {
+                    console.error('Error al sincronizar operación:', op, error);
+                    break;
+                }
+            }
+
+            if (processed > 0) {
+                try {
+                    tramitesCache = await fetchTramitesRemote();
+                    persistTramitesCache(tramitesCache);
+                } catch (e) {
+                    console.warn('No se pudo refrescar trámites tras sincronizar:', e);
+                }
+
+                try {
+                    configCache = await fetchConfigRemote();
+                    persistConfigCache(configCache);
+                } catch (e) {
+                    console.warn('No se pudo refrescar configuración tras sincronizar:', e);
+                }
+
+                actualizarSelectorTramite();
+                renderTable();
+                updateFilterOptions();
+                if (moduloActual) updateStats();
+                if (currentPage === 'config') renderConfig();
+                showToast(`Sincronizados ${processed} cambio${processed !== 1 ? 's' : ''} con la base de datos.`, 'success');
+            }
+
+            syncInProgress = false;
+            updatePendingSyncBadge();
+        }
+
+        function setupNetworkListeners() {
+            window.addEventListener('online', () => {
+                updateOfflineBanner();
+                showToast('Conexión restablecida. Sincronizando cambios...', 'info');
+                processSyncQueue();
+            });
+            window.addEventListener('offline', () => {
+                updateOfflineBanner();
+                showToast('Sin conexión. Los cambios se guardarán localmente.', 'warning');
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && isAppOnline()) {
+                    processSyncQueue();
+                }
+            });
+            updateOfflineBanner();
+            updatePendingSyncBadge();
+        }
+
+        function registerServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then((registration) => {
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (!newWorker) return;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showToast('Nueva versión disponible. Recargue la página para actualizar.', 'info');
+                                }
+                            });
+                        });
+                    })
+                    .catch((err) => console.warn('Service Worker no registrado:', err));
+            });
+        }
+
+        // ================================================================
+        //  3.  FUNCIONES DE ALMACENAMIENTO (Supabase + fallback offline)
+        // ================================================================
+
+        // ---- 3.a  TRÁMITES ----
+
+        function mapTramiteRow(row) {
+            return {
                 id: row.id,
                 modulo: row.modulo,
                 fecha: row.fecha,
@@ -1492,16 +1739,11 @@
                 fotoData: row.foto_data,
                 retirado: row.retirado,
                 salidaReal: row.salida_real
-            }));
+            };
         }
 
-        /**
-         * Inserta o actualiza un trámite en Supabase.
-         * @param {Object} tramite  objeto en formato interno (camelCase)
-         */
-        async function upsertTramite(tramite) {
-            // Convertir camelCase -> snake_case para la BD
-            const row = {
+        function mapTramiteToRow(tramite) {
+            return {
                 id: tramite.id,
                 modulo: tramite.modulo,
                 fecha: tramite.fecha,
@@ -1516,14 +1758,73 @@
                 retirado: tramite.retirado,
                 salida_real: tramite.salidaReal || null
             };
+        }
 
+        async function fetchTramitesRemote() {
+            const { data, error } = await supabaseClient
+                .from('tramites')
+                .select('*')
+                .order('fecha', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(mapTramiteRow);
+        }
+
+        /**
+         * Obtiene todos los trámites desde Supabase o caché local si no hay red.
+         */
+        async function getTramites() {
+            if (!isAppOnline()) {
+                return loadTramitesFromLocalStorage() || [];
+            }
+
+            try {
+                const tramites = await fetchTramitesRemote();
+                persistTramitesCache(tramites);
+                return tramites;
+            } catch (error) {
+                console.error('Error al obtener trámites:', error);
+                const cached = loadTramitesFromLocalStorage();
+                if (cached) {
+                    showToast('Sin conexión estable. Mostrando datos guardados localmente.', 'warning');
+                    return cached;
+                }
+                showToast('Error al cargar los trámites desde la base de datos.', 'error');
+                return [];
+            }
+        }
+
+        async function upsertTramiteRemote(tramite) {
             const { error } = await supabaseClient
                 .from('tramites')
-                .upsert(row, { onConflict: 'id' });
+                .upsert(mapTramiteToRow(tramite), { onConflict: 'id' });
 
             if (error) {
                 console.error('Error al guardar trámite:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Inserta o actualiza un trámite en Supabase.
+         */
+        async function upsertTramite(tramite) {
+            try {
+                await upsertTramiteRemote(tramite);
+            } catch (error) {
                 showToast('Error al guardar el trámite en la base de datos.', 'error');
+                throw error;
+            }
+        }
+
+        async function deleteTramiteRemote(id) {
+            const { error } = await supabaseClient
+                .from('tramites')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error al eliminar trámite:', error);
                 throw error;
             }
         }
@@ -1532,94 +1833,101 @@
          * Elimina un trámite de Supabase por id.
          */
         async function deleteTramiteSupabase(id) {
-            const { error } = await supabaseClient
-                .from('tramites')
-                .delete()
-                .eq('id', id);
-
-            if (error) {
-                console.error('Error al eliminar trámite:', error);
+            try {
+                await deleteTramiteRemote(id);
+            } catch (error) {
                 showToast('Error al eliminar el trámite de la base de datos.', 'error');
                 throw error;
             }
         }
 
-        // ---- 2.b  CONFIGURACIÓN (tipos de trámite, escribanos) ----
+        // ---- 3.b  CONFIGURACIÓN (tipos de trámite, escribanos) ----
 
-        // Usaremos dos tablas: 'tipos_tramite' y 'escribanos'
-        // Cada una con las columnas necesarias.
+        async function fetchConfigRemote() {
+            const { data: tipos, error: errTipos } = await supabaseClient
+                .from('tipos_tramite')
+                .select('*')
+                .order('nombre');
+
+            if (errTipos) throw errTipos;
+
+            const { data: escribanos, error: errEscr } = await supabaseClient
+                .from('escribanos')
+                .select('*')
+                .order('nombre');
+
+            if (errEscr) throw errEscr;
+
+            return {
+                tiposTramite: tipos || [],
+                escribanos: escribanos || []
+            };
+        }
 
         async function getConfigSupabase() {
+            if (!isAppOnline()) {
+                return loadConfigFromLocalStorage() || { tiposTramite: [], escribanos: [] };
+            }
+
             try {
-                // Obtener tipos de trámite
-                const { data: tipos, error: errTipos } = await supabaseClient
-                    .from('tipos_tramite')
-                    .select('*')
-                    .order('nombre');
-
-                if (errTipos) throw errTipos;
-
-                // Obtener escribanos
-                const { data: escribanos, error: errEscr } = await supabaseClient
-                    .from('escribanos')
-                    .select('*')
-                    .order('nombre');
-
-                if (errEscr) throw errEscr;
-
-                return {
-                    tiposTramite: tipos || [],
-                    escribanos: escribanos || []
-                };
+                const config = await fetchConfigRemote();
+                persistConfigCache(config);
+                return config;
             } catch (error) {
                 console.error('Error al obtener configuración:', error);
+                const cached = loadConfigFromLocalStorage();
+                if (cached) {
+                    showToast('Sin conexión estable. Mostrando configuración guardada localmente.', 'warning');
+                    return cached;
+                }
                 showToast('Error al cargar la configuración desde la base de datos.', 'error');
                 return { tiposTramite: [], escribanos: [] };
             }
         }
 
+        async function saveConfigSupabaseRemote(config) {
+            const { error: delTipos } = await supabaseClient
+                .from('tipos_tramite')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (delTipos) throw delTipos;
+
+            if (config.tiposTramite.length > 0) {
+                const { error: insTipos } = await supabaseClient
+                    .from('tipos_tramite')
+                    .insert(config.tiposTramite.map(t => ({
+                        id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                        nombre: t.nombre,
+                        formulario: t.formulario || '',
+                        comun: t.comun,
+                        urgente: t.urgente,
+                        catastral: t.catastral || false
+                    })));
+                if (insTipos) throw insTipos;
+            }
+
+            const { error: delEscr } = await supabaseClient
+                .from('escribanos')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (delEscr) throw delEscr;
+
+            if (config.escribanos.length > 0) {
+                const { error: insEscr } = await supabaseClient
+                    .from('escribanos')
+                    .insert(config.escribanos.map(e => ({
+                        id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                        nombre: e.nombre
+                    })));
+                if (insEscr) throw insEscr;
+            }
+        }
+
         async function saveConfigSupabase(config) {
             try {
-                // Actualizar tipos de trámite: borrar todos e insertar los nuevos (simple y robusto)
-                const { error: delTipos } = await supabaseClient
-                    .from('tipos_tramite')
-                    .delete()
-                    .neq('id', '00000000-0000-0000-0000-000000000000'); // truco para borrar todos
-
-                if (delTipos) throw delTipos;
-
-                if (config.tiposTramite.length > 0) {
-                    const { error: insTipos } = await supabaseClient
-                        .from('tipos_tramite')
-                        .insert(config.tiposTramite.map(t => ({
-                            id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
-                            nombre: t.nombre,
-                            formulario: t.formulario || '',
-                            comun: t.comun,
-                            urgente: t.urgente,
-                            catastral: t.catastral || false
-                        })));
-                    if (insTipos) throw insTipos;
-                }
-
-                // Actualizar escribanos: borrar todos e insertar los nuevos
-                const { error: delEscr } = await supabaseClient
-                    .from('escribanos')
-                    .delete()
-                    .neq('id', '00000000-0000-0000-0000-000000000000');
-
-                if (delEscr) throw delEscr;
-
-                if (config.escribanos.length > 0) {
-                    const { error: insEscr } = await supabaseClient
-                        .from('escribanos')
-                        .insert(config.escribanos.map(e => ({
-                            id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
-                            nombre: e.nombre
-                        })));
-                    if (insEscr) throw insEscr;
-                }
-
+                await saveConfigSupabaseRemote(config);
             } catch (error) {
                 console.error('Error al guardar configuración:', error);
                 showToast('Error al guardar la configuración en la base de datos.', 'error');
@@ -1627,7 +1935,7 @@
             }
         }
 
-        // ---- 2.c  MIGRACIÓN DESDE localStorage (una sola vez) ----
+        // ---- 3.c  MIGRACIÓN DESDE localStorage (una sola vez) ----
 
         const MIGRATION_FLAG = 'supabase_migration_done_v2';
 
@@ -1743,17 +2051,33 @@
             return tramitesCache;
         }
 
-        // saveData() asíncrono: guarda en Supabase y actualiza caché
-        async function saveData(tramites) {
+        // saveData() asíncrono: guarda en Supabase (o cola offline) y actualiza caché
+        async function saveData(tramites, options = {}) {
+            const { syncAll = false, changedId = null, silent = false } = options;
+
+            tramitesCache = tramites;
+            persistTramitesCache(tramites);
+
+            const toSync = syncAll
+                ? tramites
+                : changedId
+                    ? tramites.filter(t => t.id === changedId)
+                    : tramites;
+
+            if (!isAppOnline()) {
+                toSync.forEach(t => enqueueSync({ type: 'upsert_tramite', payload: t }));
+                if (!silent) showToast('Guardado localmente. Se sincronizará al reconectar.', 'warning');
+                return;
+            }
+
             try {
-                // Actualizar cada trámite en Supabase
-                for (const t of tramites) {
-                    await upsertTramite(t);
+                for (const t of toSync) {
+                    await upsertTramiteRemote(t);
                 }
-                // Actualizar caché
-                tramitesCache = tramites;
             } catch (error) {
                 console.error('Error en saveData:', error);
+                toSync.forEach(t => enqueueSync({ type: 'upsert_tramite', payload: t }));
+                if (!silent) showToast('Sin conexión estable. Cambios guardados localmente.', 'warning');
                 throw error;
             }
         }
@@ -1764,12 +2088,23 @@
         }
 
         // saveConfig() asíncrono
-        async function saveConfig(config) {
+        async function saveConfig(config, options = {}) {
+            const { silent = false } = options;
+            configCache = config;
+            persistConfigCache(config);
+
+            if (!isAppOnline()) {
+                enqueueSync({ type: 'save_config', payload: config });
+                if (!silent) showToast('Configuración guardada localmente. Se sincronizará al reconectar.', 'warning');
+                return;
+            }
+
             try {
-                await saveConfigSupabase(config);
-                configCache = config;
+                await saveConfigSupabaseRemote(config);
             } catch (error) {
                 console.error('Error en saveConfig:', error);
+                enqueueSync({ type: 'save_config', payload: config });
+                if (!silent) showToast('Sin conexión estable. Configuración guardada localmente.', 'warning');
                 throw error;
             }
         }
@@ -1779,31 +2114,44 @@
         // ================================================================
 
         async function initApp() {
-            // 1) Migrar datos desde localStorage si es necesario
-            await migrarDesdeLocalStorage();
+            setupNetworkListeners();
+            registerServiceWorker();
 
-            // 2) Cargar trámites desde Supabase
-            try {
-                tramitesCache = await getTramites();
-            } catch (e) {
-                tramitesCache = [];
-            }
+            const localTramites = loadTramitesFromLocalStorage();
+            const localConfig = loadConfigFromLocalStorage();
+            if (localTramites) tramitesCache = localTramites;
+            if (localConfig) configCache = localConfig;
 
-            // 3) Cargar configuración desde Supabase
-            try {
-                configCache = await getConfigSupabase();
-            } catch (e) {
-                configCache = { tiposTramite: [], escribanos: [] };
-            }
-
-            // 4) Inicializar la interfaz
             actualizarSelectorTramite();
 
-            // Sidebar cerrado por defecto
             document.getElementById('sidebar').classList.add('closed');
             document.getElementById('mainContent').classList.add('expanded');
 
             navigateTo('home');
+
+            if (isAppOnline()) {
+                await migrarDesdeLocalStorage();
+
+                try {
+                    tramitesCache = await getTramites();
+                } catch (e) {
+                    if (!tramitesCache.length) tramitesCache = [];
+                }
+
+                try {
+                    configCache = await getConfigSupabase();
+                } catch (e) {
+                    if (!configCache.tiposTramite.length && !configCache.escribanos.length) {
+                        configCache = { tiposTramite: [], escribanos: [] };
+                    }
+                }
+
+                await processSyncQueue();
+            } else {
+                showToast('Modo sin conexión. Mostrando datos guardados localmente.', 'warning');
+            }
+
+            updatePendingSyncBadge();
         }
 
         // ================================================================
@@ -2217,10 +2565,12 @@
                     if (checked && !tramite.salidaReal) {
                         tramite.salidaReal = new Date().toISOString().split('T')[0];
                     }
-                    await saveData(tramites);
+                    await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
                     renderTable();
                     if (moduloActual) updateStats();
-                    showToast(checked ? 'Trámite marcado como retirado.' : 'Trámite desmarcado como retirado.', 'info');
+                    if (isAppOnline()) {
+                        showToast(checked ? 'Trámite marcado como retirado.' : 'Trámite desmarcado como retirado.', 'info');
+                    }
                 }
             } catch (error) {
                 showToast('Error al actualizar el estado del trámite.', 'error');
@@ -2451,13 +2801,15 @@
                     tramites.unshift(tramite);
                 }
 
-                await saveData(tramites);
+                await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
 
                 closeTramiteModal();
                 renderTable();
                 updateFilterOptions();
                 if (moduloActual) updateStats();
-                showToast(id ? 'Trámite actualizado correctamente.' : 'Trámite agregado correctamente.', 'success');
+                if (isAppOnline()) {
+                    showToast(id ? 'Trámite actualizado correctamente.' : 'Trámite agregado correctamente.', 'success');
+                }
             } catch (error) {
                 showToast('Error al guardar el trámite. Intente nuevamente.', 'error');
             }
@@ -2467,16 +2819,27 @@
             if (!confirm('¿Está seguro de eliminar este trámite? Esta acción no se puede deshacer.')) return;
 
             try {
-                await deleteTramiteSupabase(id);
-                let tramites = getData();
-                tramites = tramites.filter(t => t.id !== id);
+                const tramites = getData().filter(t => t.id !== id);
                 tramitesCache = tramites;
+                persistTramitesCache(tramites);
+
+                if (!isAppOnline()) {
+                    enqueueSync({ type: 'delete_tramite', payload: { id } });
+                    renderTable();
+                    updateFilterOptions();
+                    if (moduloActual) updateStats();
+                    showToast('Trámite eliminado localmente. Se sincronizará al reconectar.', 'warning');
+                    return;
+                }
+
+                await deleteTramiteRemote(id);
                 renderTable();
                 updateFilterOptions();
                 if (moduloActual) updateStats();
                 showToast('Trámite eliminado correctamente.', 'success');
             } catch (error) {
-                showToast('Error al eliminar el trámite.', 'error');
+                enqueueSync({ type: 'delete_tramite', payload: { id } });
+                showToast('Eliminado localmente. Se sincronizará al reconectar.', 'warning');
             }
         }
 
@@ -2522,11 +2885,13 @@
                 if (tramite) {
                     tramite.salidaReal = fecha;
                     tramite.salida = fecha;
-                    await saveData(tramites);
+                    await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
                     closeEditarSalidaModal();
                     renderTable();
                     if (moduloActual) updateStats();
-                    showToast('Fecha de salida actualizada correctamente.', 'success');
+                    if (isAppOnline()) {
+                        showToast('Fecha de salida actualizada correctamente.', 'success');
+                    }
                 }
             } catch (error) {
                 showToast('Error al actualizar la fecha de salida.', 'error');
@@ -2965,7 +3330,7 @@
                         }
                     });
 
-                    await saveData(tramites);
+                    await saveData(tramites, { syncAll: true });
                     renderTable();
                     updateFilterOptions();
                     if (moduloActual) updateStats();
@@ -3011,7 +3376,7 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     if (data.tramites && data.config) {
-                        await saveData(data.tramites);
+                        await saveData(data.tramites, { syncAll: true });
                         await saveConfig(data.config);
                         renderTable();
                         updateFilterOptions();
