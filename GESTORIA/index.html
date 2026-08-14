@@ -1,0 +1,3434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Trámites - Escribanía</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#5b7f95" />
+    <meta name="description" content="Sistema de gestión de trámites para escribanía con soporte offline" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Gestoría" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Tesseract.js OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
+    </script>
+
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js">
+    </script>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js">
+    </script>
+
+    <!-- SUPABASE JS v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+
+    <style>
+        /* ====== ESTILOS (sin cambios) ====== */
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --accent: #5b7f95;
+            --accent-light: #7fa3b5;
+            --border: #e0e5ec;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --success: #27ae60;
+            --sidebar-bg: #2c3e50;
+            --sidebar-text: #ecf0f1;
+            --hover-row: #f0f4f8;
+            --urgent-bg: #ffeaea;
+            --modal-overlay: rgba(0, 0, 0, 0.5);
+            --toast-bg: #2c3e50;
+            --toast-text: #ffffff;
+            --badge-green: #d4edda;
+            --badge-yellow: #fff3cd;
+            --badge-red: #f8d7da;
+            --badge-text-green: #155724;
+            --badge-text-yellow: #856404;
+            --badge-text-red: #721c24;
+            --card-bg: #ffffff;
+            --input-bg: #ffffff;
+            --button-hover: #4a6a7c;
+            --rpi-color: #5b7f95;
+            --catastro-color: #8e44ad;
+        }
+
+        .dark-mode {
+            --bg-primary: #1a1d23;
+            --bg-secondary: #252830;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border: #3a3d44;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            --sidebar-bg: #1a1d23;
+            --sidebar-text: #e0e0e0;
+            --hover-row: #2a2d35;
+            --urgent-bg: #3d2020;
+            --modal-overlay: rgba(0, 0, 0, 0.8);
+            --toast-bg: #1a1d23;
+            --card-bg: #252830;
+            --input-bg: #2a2d35;
+            --button-hover: #3d505f;
+            --rpi-color: #5b7f95;
+            --catastro-color: #8e44ad;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+        }
+        .sidebar.closed {
+            transform: translateX(-100%);
+        }
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-header i {
+            font-size: 1.5rem;
+            color: var(--accent-light);
+        }
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 0;
+        }
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 24px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-nav a:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-left-color: var(--accent-light);
+        }
+        .sidebar-nav a.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: var(--accent-light);
+            font-weight: 600;
+        }
+        .sidebar-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .dark-mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 24px;
+            cursor: pointer;
+            color: var(--sidebar-text);
+            transition: 0.2s;
+        }
+        .dark-mode-toggle:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--modal-overlay);
+            z-index: 999;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            min-height: 100vh;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 24px;
+            width: 100%;
+        }
+        .main-content.expanded {
+            margin-left: 0;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .hamburger-btn {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 8px;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+        .hamburger-btn:hover {
+            background: var(--hover-row);
+        }
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid var(--border);
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        }
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .stat-icon.blue {
+            background: #e8f0fe;
+            color: #5b7f95;
+        }
+        .stat-icon.yellow {
+            background: #fff8e1;
+            color: #f39c12;
+        }
+        .stat-icon.red {
+            background: #fde8e8;
+            color: #e74c3c;
+        }
+        .stat-icon.green {
+            background: #e8f5e9;
+            color: #27ae60;
+        }
+        .stat-icon.purple {
+            background: #f3e5f5;
+            color: #8e44ad;
+        }
+        .stat-info h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-info p {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .selector-tramite {
+            display: flex;
+            gap: 0;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+        .selector-tramite button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .selector-tramite button.active-rpi {
+            background: var(--rpi-color);
+            color: white;
+            border-bottom-color: var(--rpi-color);
+        }
+        .selector-tramite button.active-catastro {
+            background: var(--catastro-color);
+            color: white;
+            border-bottom-color: var(--catastro-color);
+        }
+        .selector-tramite button:hover:not(.active-rpi):not(.active-catastro) {
+            background: var(--hover-row);
+        }
+        .module-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 40px 0;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .module-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 50px 30px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 3px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .module-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        .module-card.rpi-card:hover {
+            border-color: var(--rpi-color);
+        }
+        .module-card.catastro-card:hover {
+            border-color: var(--catastro-color);
+        }
+        .module-card i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .module-card.rpi-card i {
+            color: var(--rpi-color);
+        }
+        .module-card.catastro-card i {
+            color: var(--catastro-color);
+        }
+        .module-card h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .module-card p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        .modal-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border);
+        }
+        .modal-tabs button {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            font-size: 0.95rem;
+        }
+        .modal-tabs button.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+        .modal-tabs button:hover {
+            background: var(--hover-row);
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px 12px 42px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
+        }
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+        .btn:hover {
+            background: var(--hover-row);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .btn-primary:hover {
+            background: var(--button-hover);
+            border-color: var(--button-hover);
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+        .btn-success {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+        }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+        .filter-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-group select {
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+        thead th {
+            background: var(--bg-primary);
+            padding: 14px 12px;
+            text-align: left;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        thead th:hover {
+            background: var(--hover-row);
+            color: var(--accent);
+        }
+        thead th i {
+            margin-left: 4px;
+            font-size: 0.7rem;
+        }
+        tbody td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+        tbody tr {
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        tbody tr:hover {
+            background: var(--hover-row);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .status-badge.on-time {
+            background: var(--badge-green);
+            color: var(--badge-text-green);
+        }
+        .status-badge.warning {
+            background: var(--badge-yellow);
+            color: var(--badge-text-yellow);
+        }
+        .status-badge.expired {
+            background: var(--badge-red);
+            color: var(--badge-text-red);
+        }
+        .status-badge.retirado {
+            background: #cce5ff;
+            color: #004085;
+        }
+        .urgent-indicator {
+            color: var(--danger);
+            font-weight: 700;
+        }
+        .photo-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: transform 0.2s;
+        }
+        .photo-thumb:hover {
+            transform: scale(1.1);
+        }
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .actions-cell input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .badge-modulo {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-modulo.rpi {
+            background: #e8f0fe;
+            color: #5b7f95;
+        }
+        .badge-modulo.catastro {
+            background: #f3e5f5;
+            color: #8e44ad;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--modal-overlay);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 28px;
+            width: 95%;
+            max-width: 650px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            font-size: 1.4rem;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 50%;
+            transition: 0.2s;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover {
+            background: var(--hover-row);
+            color: var(--text-primary);
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .ocr-scanner {
+            text-align: center;
+            padding: 20px;
+        }
+        .ocr-scanner video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 2px solid var(--border);
+        }
+        .ocr-results {
+            max-height: 150px;
+            overflow-y: auto;
+            margin: 12px 0;
+        }
+        .ocr-result-item {
+            padding: 10px 14px;
+            margin: 4px 0;
+            background: var(--hover-row);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .ocr-result-item:hover {
+            background: var(--accent);
+            color: white;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast {
+            background: var(--toast-bg);
+            color: var(--toast-text);
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 400px;
+        }
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+        .toast.info {
+            border-left: 4px solid var(--accent);
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+        .config-section {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        .config-section h3 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+        .config-list {
+            list-style: none;
+        }
+        .config-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .config-list li:last-child {
+            border-bottom: none;
+        }
+        .config-list .item-info {
+            flex: 1;
+            min-width: 200px;
+        }
+        .config-list .item-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .detalle-tramite {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+        .detalle-tramite h4 {
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+        .detalle-tramite-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 20px;
+        }
+        .detalle-tramite-grid .label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .detalle-tramite-grid .value {
+            color: var(--text-primary);
+        }
+        .vencimiento-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .vencimiento-item:hover {
+            background: var(--hover-row);
+            margin: 0 -8px;
+            padding-left: 8px;
+            padding-right: 8px;
+            border-radius: 6px;
+        }
+        .vencimiento-item .vencimiento-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .vencimiento-item .vencimiento-info .nombre {
+            font-weight: 600;
+        }
+        .vencimiento-item .vencimiento-info .detalle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .vencimiento-item .vencimiento-estado {
+            flex-shrink: 0;
+        }
+        .vencimiento-detalle-expandido {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 4px 0 8px 0;
+            border-left: 3px solid var(--accent);
+            font-size: 0.9rem;
+            display: none;
+        }
+        .vencimiento-detalle-expandido.mostrar {
+            display: block;
+        }
+        .vencimiento-detalle-expandido .detalle-row {
+            display: flex;
+            gap: 8px;
+            padding: 2px 0;
+        }
+        .vencimiento-detalle-expandido .detalle-row .detalle-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 140px;
+        }
+        .vencimiento-buscador {
+            margin-bottom: 12px;
+        }
+        .vencimiento-buscador input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .vencimiento-buscador input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 280px;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-card {
+                padding: 14px;
+            }
+            .stat-info p {
+                font-size: 1.4rem;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .toolbar {
+                flex-direction: column;
+            }
+            .search-box {
+                width: 100%;
+            }
+            .filter-group {
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            .page-title {
+                font-size: 1.4rem;
+            }
+            .modal {
+                padding: 20px;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 16px 16px 0 0;
+                max-height: 90vh;
+                margin-top: auto;
+            }
+            .modal-overlay {
+                align-items: flex-end;
+            }
+            .module-selector {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .detalle-tramite-grid {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            .vencimiento-item {
+                flex-wrap: wrap;
+            }
+            .vencimiento-item .vencimiento-estado {
+                margin-top: 4px;
+            }
+        }
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .stat-card {
+                flex-direction: column;
+                text-align: center;
+                gap: 8px;
+            }
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* ====== PWA / OFFLINE ====== */
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+            background: var(--warning);
+            color: #fff;
+            padding: 10px 16px;
+            text-align: center;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .offline-banner.hidden {
+            display: none;
+        }
+
+        .offline-banner i {
+            font-size: 1rem;
+        }
+
+        .pending-sync-badge {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        body.has-offline-banner {
+            padding-top: 44px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Banner offline -->
+    <div id="offlineBanner" class="offline-banner hidden" role="status" aria-live="polite">
+        <i class="fas fa-wifi-slash" aria-hidden="true"></i>
+        <span>Estás sin conexión. Los datos se guardarán localmente.</span>
+        <span id="pendingSyncCount" class="pending-sync-badge" style="display:none;"></span>
+    </div>
+
+    <!-- ====== SIDEBAR ====== -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <nav class="sidebar closed" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-scale-balanced"></i>
+            <span>Escribanía</span>
+        </div>
+        <div class="sidebar-nav">
+            <a data-page="home" class="active" onclick="navigateTo('home')">
+                <i class="fas fa-home"></i> Inicio
+            </a>
+            <a data-page="tramites" onclick="navigateTo('tramites')">
+                <i class="fas fa-file-signature"></i> Trámites
+            </a>
+            <a data-page="config" onclick="navigateTo('config')">
+                <i class="fas fa-gear"></i> Configuración
+            </a>
+        </div>
+        <div class="dark-mode-toggle" onclick="toggleDarkMode()">
+            <i class="fas fa-moon"></i>
+            <span>Modo Oscuro</span>
+        </div>
+        <div class="sidebar-footer">Gestión de Trámites v2.0</div>
+    </nav>
+
+    <!-- ====== MAIN ====== -->
+    <main class="main-content expanded" id="mainContent">
+        <!-- top bar -->
+        <div class="top-bar">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="page-title" id="pageTitle">Inicio</h1>
+        </div>
+
+        <!-- Página Inicio -->
+        <div id="page-home" class="page active">
+            <div id="moduleSelector">
+                <div class="module-selector">
+                    <div class="module-card rpi-card" onclick="seleccionarModulo('rpi')">
+                        <i class="fas fa-building"></i>
+                        <h2>RPI</h2>
+                        <p>Registro de la Propiedad Inmueble</p>
+                    </div>
+                    <div class="module-card catastro-card" onclick="seleccionarModulo('catastro')">
+                        <i class="fas fa-map"></i>
+                        <h2>Catastro</h2>
+                        <p>Gestión de trámites catastrales</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="moduleDashboard" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+                    <h2 id="moduleTitle" style="font-size:1.5rem;">RPI</h2>
+                    <button class="btn" onclick="volverSelector()">
+                        <i class="fas fa-arrow-left"></i> Cambiar módulo
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
+                        <div class="stat-info"><h3>Total Trámites</h3><p id="statTotal">0</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info"><h3>Pendientes</h3><p id="statPendientes">0</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info"><h3>Urgentes</h3><p id="statUrgentes">0</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info"><h3>Al Día</h3><p id="statAlDia">0</p></div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3><i class="fas fa-chart-simple"></i> Trámites</h3>
+                    <div class="vencimiento-buscador">
+                        <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
+                    </div>
+                    <div id="vencimientosList" style="max-height:400px; overflow-y:auto;">
+                        <p style="color:var(--text-secondary);">No hay trámites registrados.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Página Trámites -->
+        <div id="page-tramites" class="page" style="display:none;">
+            <div class="selector-tramite" id="tramiteSelector">
+                <button class="active-rpi" data-modulo="rpi" onclick="cambiarFiltroModulo('rpi')">
+                    <i class="fas fa-building"></i> RPI
+                </button>
+                <button data-modulo="catastro" onclick="cambiarFiltroModulo('catastro')">
+                    <i class="fas fa-map"></i> Catastro
+                </button>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar trámites..." oninput="renderTable()">
+                </div>
+                <div class="filter-group">
+                    <select id="filterTramite" onchange="renderTable()"><option value="">Todos los trámites</option></select>
+                    <select id="filterEscribano" onchange="renderTable()"><option value="">Todos los escribanos</option></select>
+                    <select id="filterEstado" onchange="renderTable()">
+                        <option value="">Todos los estados</option>
+                        <option value="on-time">Al día</option>
+                        <option value="warning">Próximo a finalizar</option>
+                        <option value="expired">Finalizado</option>
+                        <option value="retirado">Retirado</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="openTramiteModal()"><i class="fas fa-plus"></i> Nuevo Trámite</button>
+                <button class="btn" onclick="exportToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="btn" onclick="exportToPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button class="btn" onclick="importFromExcel()"><i class="fas fa-file-import"></i> Importar</button>
+                <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)">
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('fecha')">Fecha <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('tramite')">Trámite <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('nombreCliente')">Nombre / Cliente <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('nroEntrada')">N° Entrada <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('urgencia')">Común/Urgente <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('para')">Para <i class="fas fa-sort"></i></th>
+                            <th onclick="sortTable('salida')">Salida <i class="fas fa-sort"></i></th>
+                            <th>Estado</th>
+                            <th>Módulo</th>
+                            <th>Notas</th>
+                            <th>Foto</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr class="empty-state">
+                            <td colspan="12">
+                                <i class="fas fa-inbox"></i>
+                                <p>No hay trámites registrados</p>
+                                <button class="btn btn-primary" onclick="openTramiteModal()" style="margin-top:12px;">
+                                    <i class="fas fa-plus"></i> Agregar primer trámite
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Página Configuración -->
+        <div id="page-config" class="page" style="display:none;">
+            <div class="config-section">
+                <h3><i class="fas fa-list-check"></i> Tipos de Trámite</h3>
+                <ul class="config-list" id="tiposTramiteList"></ul>
+                <button class="btn btn-primary" onclick="openTipoTramiteModal()" style="margin-top:12px;">
+                    <i class="fas fa-plus"></i> Agregar Tipo de Trámite
+                </button>
+            </div>
+            <div class="config-section">
+                <h3><i class="fas fa-user-tie"></i> Escribanos</h3>
+                <ul class="config-list" id="escribanosList"></ul>
+                <button class="btn btn-primary" onclick="openEscribanoModal()" style="margin-top:12px;">
+                    <i class="fas fa-plus"></i> Agregar Escribano
+                </button>
+            </div>
+            <div class="config-section">
+                <h3><i class="fas fa-database"></i> Respaldo de Datos</h3>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+                    <button class="btn" onclick="exportBackup()"><i class="fas fa-download"></i> Exportar Backup (JSON)</button>
+                    <button class="btn" onclick="document.getElementById('restoreFileInput').click()"><i class="fas fa-upload"></i> Restaurar Backup</button>
+                    <input type="file" id="restoreFileInput" accept=".json" style="display:none;" onchange="handleRestoreBackup(event)">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ====== MODALES ====== -->
+
+    <!-- Modal Trámite -->
+    <div class="modal-overlay" id="tramiteModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="tramiteModalTitle">Nuevo Trámite</h2>
+                <button class="modal-close" onclick="closeTramiteModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-tabs" id="modalTabs">
+                <button class="active" data-modulo="rpi" onclick="cambiarModalModulo('rpi')"><i class="fas fa-building"></i> RPI</button>
+                <button data-modulo="catastro" onclick="cambiarModalModulo('catastro')"><i class="fas fa-map"></i> Catastro</button>
+            </div>
+            <form id="tramiteForm" onsubmit="saveTramite(event)">
+                <input type="hidden" id="tramiteId">
+                <input type="hidden" id="tramiteModulo" value="rpi">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha *</label>
+                        <input type="date" id="tramiteFecha" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Trámite *</label>
+                        <select id="tramiteTipo" required onchange="calcularSalida()">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre / Cliente *</label>
+                        <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
+                    </div>
+                    <div class="form-group">
+                        <label>N° de Entrada / Expediente</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="tramiteNroEntrada" placeholder="Número" style="flex:1;">
+                            <button type="button" class="btn btn-sm" onclick="openOCRScanner()"><i class="fas fa-camera"></i> Escanear</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Urgencia</label>
+                        <select id="tramiteUrgencia" onchange="calcularSalida()">
+                            <option value="Común">Común</option>
+                            <option value="Urgente">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Para (Escribano) *</label>
+                        <select id="tramitePara" required>
+                            <option value="">Seleccionar...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha de Salida (Estimada)</label>
+                        <input type="date" id="tramiteSalida" readonly style="background-color:var(--hover-row);">
+                        <small style="color:var(--text-secondary); display:block; margin-top:4px;">Calculada automáticamente según tipo de trámite y urgencia</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea id="tramiteNotas" rows="2" placeholder="Observaciones..."></textarea>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Fotografía</label>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-sm" onclick="openCamera()"><i class="fas fa-camera"></i> Tomar Foto</button>
+                        <button type="button" class="btn btn-sm" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-image"></i> Galería</button>
+                        <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event)">
+                        <img id="photoPreview" src="" alt="Foto" style="display:none; width:60px; height:60px; object-fit:cover; border-radius:8px; border:2px solid var(--border);">
+                        <button type="button" class="btn btn-sm btn-danger" id="removePhotoBtn" style="display:none;" onclick="removePhoto()"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <input type="hidden" id="tramiteFotoData">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeTramiteModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal OCR -->
+    <div class="modal-overlay" id="ocrModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Escanear Número</h2>
+                <button class="modal-close" onclick="closeOCRScanner()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="ocr-scanner">
+                <video id="ocrVideo" autoplay playsinline></video>
+                <p style="color:var(--text-secondary); margin-bottom:8px;">Apunte la cámara al número</p>
+                <button class="btn btn-primary" id="ocrCaptureBtn" onclick="captureOCR()"><i class="fas fa-camera"></i> Capturar y Reconocer</button>
+                <div class="ocr-results" id="ocrResults" style="display:none;">
+                    <p style="font-weight:600; margin-bottom:8px;">Números detectados:</p>
+                </div>
+                <canvas id="ocrCanvas" style="display:none;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tipo de Trámite -->
+    <div class="modal-overlay" id="tipoTramiteModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="tipoTramiteModalTitle">Nuevo Tipo de Trámite</h2>
+                <button class="modal-close" onclick="closeTipoTramiteModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="tipoTramiteForm" onsubmit="saveTipoTramite(event)">
+                <input type="hidden" id="tipoTramiteId">
+                <div class="form-group">
+                    <label>Nombre del Trámite *</label>
+                    <input type="text" id="tipoTramiteNombre" required placeholder="Ej: Informe de Dominio">
+                </div>
+                <div class="form-group">
+                    <label>Formulario (opcional)</label>
+                    <input type="text" id="tipoTramiteFormulario" placeholder="N° o nombre del formulario">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tiempo Común (días) *</label>
+                        <input type="number" id="tipoTramiteComun" required min="1" placeholder="15">
+                    </div>
+                    <div class="form-group">
+                        <label>Tiempo Urgente (horas) *</label>
+                        <input type="number" id="tipoTramiteUrgente" required min="1" placeholder="48">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="tipoTramiteCatastral">
+                        <span>Catastral (visible solo en módulo Catastro)</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeTipoTramiteModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Escribano -->
+    <div class="modal-overlay" id="escribanoModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="escribanoModalTitle">Nuevo Escribano</h2>
+                <button class="modal-close" onclick="closeEscribanoModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="escribanoForm" onsubmit="saveEscribano(event)">
+                <input type="hidden" id="escribanoId">
+                <div class="form-group">
+                    <label>Nombre del Escribano *</label>
+                    <input type="text" id="escribanoNombre" required placeholder="Nombre completo">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeEscribanoModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Fecha Salida -->
+    <div class="modal-overlay" id="editarSalidaModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Editar Fecha de Salida</h2>
+                <button class="modal-close" onclick="closeEditarSalidaModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="editarSalidaForm" onsubmit="saveEditarSalida(event)">
+                <input type="hidden" id="editarSalidaId">
+                <div class="form-group">
+                    <label>Fecha de Salida Real</label>
+                    <input type="date" id="editarSalidaFecha" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" onclick="closeEditarSalidaModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Detalle Trámite -->
+    <div class="modal-overlay" id="detalleModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Detalle del Trámite</h2>
+                <button class="modal-close" onclick="closeDetalleModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="detalleContenido"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ================================================================== -->
+    <!-- ====== JAVASCRIPT – SOLO SE MODIFICA EL SISTEMA DE ALMACENAMIENTO ====== -->
+    <!-- ================================================================== -->
+    <script>
+        // ================================================================
+        //  1.  CONFIGURACIÓN DE SUPABASE  (cambiar aquí con tus credenciales)
+        // ================================================================
+        const SUPABASE_URL = 'https://bmjhbsqecppgyesgomxh.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_mZKSAjuSFGaPvYqaCxGSeA_5ZtMe_Sk';
+        // Crear el cliente una sola vez
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ================================================================
+        //  2.  PWA / OFFLINE – Caché local y cola de sincronización
+        // ================================================================
+        const PWA_TRAMITES_CACHE = 'pwa_tramites_cache_v1';
+        const PWA_CONFIG_CACHE = 'pwa_config_cache_v1';
+        const PWA_SYNC_QUEUE = 'pwa_sync_queue_v1';
+
+        let syncInProgress = false;
+
+        function isAppOnline() {
+            return navigator.onLine;
+        }
+
+        function loadTramitesFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(PWA_TRAMITES_CACHE);
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistTramitesCache(tramites) {
+            try {
+                localStorage.setItem(PWA_TRAMITES_CACHE, JSON.stringify(tramites));
+            } catch (e) {
+                console.warn('No se pudo guardar caché de trámites:', e);
+            }
+        }
+
+        function loadConfigFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(PWA_CONFIG_CACHE);
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistConfigCache(config) {
+            try {
+                localStorage.setItem(PWA_CONFIG_CACHE, JSON.stringify(config));
+            } catch (e) {
+                console.warn('No se pudo guardar caché de configuración:', e);
+            }
+        }
+
+        function getSyncQueue() {
+            try {
+                return JSON.parse(localStorage.getItem(PWA_SYNC_QUEUE) || '[]');
+            } catch {
+                return [];
+            }
+        }
+
+        function saveSyncQueue(queue) {
+            localStorage.setItem(PWA_SYNC_QUEUE, JSON.stringify(queue));
+        }
+
+        function enqueueSync(operation) {
+            let queue = getSyncQueue();
+            const op = {
+                ...operation,
+                queueId: operation.queueId || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                timestamp: Date.now()
+            };
+
+            if (op.type === 'upsert_tramite') {
+                queue = queue.filter(q => !(q.type === 'upsert_tramite' && q.payload.id === op.payload.id));
+                queue = queue.filter(q => !(q.type === 'delete_tramite' && q.payload.id === op.payload.id));
+            }
+            if (op.type === 'delete_tramite') {
+                queue = queue.filter(q => !(q.type === 'upsert_tramite' && q.payload.id === op.payload.id));
+                queue = queue.filter(q => !(q.type === 'delete_tramite' && q.payload.id === op.payload.id));
+            }
+            if (op.type === 'save_config') {
+                queue = queue.filter(q => q.type !== 'save_config');
+            }
+
+            queue.push(op);
+            saveSyncQueue(queue);
+            updatePendingSyncBadge();
+        }
+
+        function removeSyncOperation(queueId) {
+            saveSyncQueue(getSyncQueue().filter(q => q.queueId !== queueId));
+            updatePendingSyncBadge();
+        }
+
+        function updateOfflineBanner() {
+            const banner = document.getElementById('offlineBanner');
+            if (!banner) return;
+            const offline = !isAppOnline();
+            banner.classList.toggle('hidden', !offline);
+            document.body.classList.toggle('has-offline-banner', offline);
+        }
+
+        function updatePendingSyncBadge() {
+            const badge = document.getElementById('pendingSyncCount');
+            if (!badge) return;
+            const count = getSyncQueue().length;
+            if (count > 0) {
+                badge.textContent = `${count} cambio${count !== 1 ? 's' : ''} pendiente${count !== 1 ? 's' : ''}`;
+                badge.style.display = 'inline';
+            } else {
+                badge.textContent = '';
+                badge.style.display = 'none';
+            }
+        }
+
+        async function processSyncQueue() {
+            if (syncInProgress || !isAppOnline() || getSyncQueue().length === 0) return;
+
+            syncInProgress = true;
+            const queue = getSyncQueue();
+            let processed = 0;
+
+            for (const op of queue) {
+                try {
+                    switch (op.type) {
+                        case 'upsert_tramite':
+                            await upsertTramiteRemote(op.payload);
+                            break;
+                        case 'delete_tramite':
+                            await deleteTramiteRemote(op.payload.id);
+                            break;
+                        case 'save_config':
+                            await saveConfigSupabaseRemote(op.payload);
+                            break;
+                        default:
+                            break;
+                    }
+                    removeSyncOperation(op.queueId);
+                    processed++;
+                } catch (error) {
+                    console.error('Error al sincronizar operación:', op, error);
+                    break;
+                }
+            }
+
+            if (processed > 0) {
+                try {
+                    tramitesCache = await fetchTramitesRemote();
+                    persistTramitesCache(tramitesCache);
+                } catch (e) {
+                    console.warn('No se pudo refrescar trámites tras sincronizar:', e);
+                }
+
+                try {
+                    configCache = await fetchConfigRemote();
+                    persistConfigCache(configCache);
+                } catch (e) {
+                    console.warn('No se pudo refrescar configuración tras sincronizar:', e);
+                }
+
+                actualizarSelectorTramite();
+                renderTable();
+                updateFilterOptions();
+                if (moduloActual) updateStats();
+                if (currentPage === 'config') renderConfig();
+                showToast(`Sincronizados ${processed} cambio${processed !== 1 ? 's' : ''} con la base de datos.`, 'success');
+            }
+
+            syncInProgress = false;
+            updatePendingSyncBadge();
+        }
+
+        function setupNetworkListeners() {
+            window.addEventListener('online', () => {
+                updateOfflineBanner();
+                showToast('Conexión restablecida. Sincronizando cambios...', 'info');
+                processSyncQueue();
+            });
+            window.addEventListener('offline', () => {
+                updateOfflineBanner();
+                showToast('Sin conexión. Los cambios se guardarán localmente.', 'warning');
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && isAppOnline()) {
+                    processSyncQueue();
+                }
+            });
+            updateOfflineBanner();
+            updatePendingSyncBadge();
+        }
+
+        function registerServiceWorker() {
+            if (!('serviceWorker' in navigator)) return;
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then((registration) => {
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (!newWorker) return;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showToast('Nueva versión disponible. Recargue la página para actualizar.', 'info');
+                                }
+                            });
+                        });
+                    })
+                    .catch((err) => console.warn('Service Worker no registrado:', err));
+            });
+        }
+
+        // ================================================================
+        //  3.  FUNCIONES DE ALMACENAMIENTO (Supabase + fallback offline)
+        // ================================================================
+
+        // ---- 3.a  TRÁMITES ----
+
+        function mapTramiteRow(row) {
+            return {
+                id: row.id,
+                modulo: row.modulo,
+                fecha: row.fecha,
+                tramite: row.tramite,
+                nombreCliente: row.nombre_cliente,
+                nroEntrada: row.nro_entrada,
+                urgencia: row.urgencia,
+                para: row.para,
+                salida: row.salida,
+                notas: row.notas,
+                fotoData: row.foto_data,
+                retirado: row.retirado,
+                salidaReal: row.salida_real
+            };
+        }
+
+        function mapTramiteToRow(tramite) {
+            return {
+                id: tramite.id,
+                modulo: tramite.modulo,
+                fecha: tramite.fecha,
+                tramite: tramite.tramite,
+                nombre_cliente: tramite.nombreCliente,
+                nro_entrada: tramite.nroEntrada,
+                urgencia: tramite.urgencia,
+                para: tramite.para,
+                salida: tramite.salida,
+                notas: tramite.notas,
+                foto_data: tramite.fotoData,
+                retirado: tramite.retirado,
+                salida_real: tramite.salidaReal || null
+            };
+        }
+
+        async function fetchTramitesRemote() {
+            const { data, error } = await supabaseClient
+                .from('tramites')
+                .select('*')
+                .order('fecha', { ascending: false });
+
+            if (error) throw error;
+            return (data || []).map(mapTramiteRow);
+        }
+
+        /**
+         * Obtiene todos los trámites desde Supabase o caché local si no hay red.
+         */
+        async function getTramites() {
+            if (!isAppOnline()) {
+                return loadTramitesFromLocalStorage() || [];
+            }
+
+            try {
+                const tramites = await fetchTramitesRemote();
+                persistTramitesCache(tramites);
+                return tramites;
+            } catch (error) {
+                console.error('Error al obtener trámites:', error);
+                const cached = loadTramitesFromLocalStorage();
+                if (cached) {
+                    showToast('Sin conexión estable. Mostrando datos guardados localmente.', 'warning');
+                    return cached;
+                }
+                showToast('Error al cargar los trámites desde la base de datos.', 'error');
+                return [];
+            }
+        }
+
+        async function upsertTramiteRemote(tramite) {
+            const { error } = await supabaseClient
+                .from('tramites')
+                .upsert(mapTramiteToRow(tramite), { onConflict: 'id' });
+
+            if (error) {
+                console.error('Error al guardar trámite:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Inserta o actualiza un trámite en Supabase.
+         */
+        async function upsertTramite(tramite) {
+            try {
+                await upsertTramiteRemote(tramite);
+            } catch (error) {
+                showToast('Error al guardar el trámite en la base de datos.', 'error');
+                throw error;
+            }
+        }
+
+        async function deleteTramiteRemote(id) {
+            const { error } = await supabaseClient
+                .from('tramites')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error al eliminar trámite:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * Elimina un trámite de Supabase por id.
+         */
+        async function deleteTramiteSupabase(id) {
+            try {
+                await deleteTramiteRemote(id);
+            } catch (error) {
+                showToast('Error al eliminar el trámite de la base de datos.', 'error');
+                throw error;
+            }
+        }
+
+        // ---- 3.b  CONFIGURACIÓN (tipos de trámite, escribanos) ----
+
+        async function fetchConfigRemote() {
+            const { data: tipos, error: errTipos } = await supabaseClient
+                .from('tipos_tramite')
+                .select('*')
+                .order('nombre');
+
+            if (errTipos) throw errTipos;
+
+            const { data: escribanos, error: errEscr } = await supabaseClient
+                .from('escribanos')
+                .select('*')
+                .order('nombre');
+
+            if (errEscr) throw errEscr;
+
+            return {
+                tiposTramite: tipos || [],
+                escribanos: escribanos || []
+            };
+        }
+
+        async function getConfigSupabase() {
+            if (!isAppOnline()) {
+                return loadConfigFromLocalStorage() || { tiposTramite: [], escribanos: [] };
+            }
+
+            try {
+                const config = await fetchConfigRemote();
+                persistConfigCache(config);
+                return config;
+            } catch (error) {
+                console.error('Error al obtener configuración:', error);
+                const cached = loadConfigFromLocalStorage();
+                if (cached) {
+                    showToast('Sin conexión estable. Mostrando configuración guardada localmente.', 'warning');
+                    return cached;
+                }
+                showToast('Error al cargar la configuración desde la base de datos.', 'error');
+                return { tiposTramite: [], escribanos: [] };
+            }
+        }
+
+        async function saveConfigSupabaseRemote(config) {
+            const { error: delTipos } = await supabaseClient
+                .from('tipos_tramite')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (delTipos) throw delTipos;
+
+            if (config.tiposTramite.length > 0) {
+                const { error: insTipos } = await supabaseClient
+                    .from('tipos_tramite')
+                    .insert(config.tiposTramite.map(t => ({
+                        id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                        nombre: t.nombre,
+                        formulario: t.formulario || '',
+                        comun: t.comun,
+                        urgente: t.urgente,
+                        catastral: t.catastral || false
+                    })));
+                if (insTipos) throw insTipos;
+            }
+
+            const { error: delEscr } = await supabaseClient
+                .from('escribanos')
+                .delete()
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+
+            if (delEscr) throw delEscr;
+
+            if (config.escribanos.length > 0) {
+                const { error: insEscr } = await supabaseClient
+                    .from('escribanos')
+                    .insert(config.escribanos.map(e => ({
+                        id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                        nombre: e.nombre
+                    })));
+                if (insEscr) throw insEscr;
+            }
+        }
+
+        async function saveConfigSupabase(config) {
+            try {
+                await saveConfigSupabaseRemote(config);
+            } catch (error) {
+                console.error('Error al guardar configuración:', error);
+                showToast('Error al guardar la configuración en la base de datos.', 'error');
+                throw error;
+            }
+        }
+
+        // ---- 3.c  MIGRACIÓN DESDE localStorage (una sola vez) ----
+
+        const MIGRATION_FLAG = 'supabase_migration_done_v2';
+
+        async function migrarDesdeLocalStorage() {
+            // Verificar si ya se migró
+            if (localStorage.getItem(MIGRATION_FLAG) === 'true') return;
+
+            // Verificar si hay datos en localStorage
+            const localTramites = JSON.parse(localStorage.getItem('escribania_tramites_v2') || '[]');
+            const localConfig = JSON.parse(localStorage.getItem('escribania_config_v2') || '{"tiposTramite":[],"escribanos":[]}');
+
+            if (localTramites.length === 0 && localConfig.tiposTramite.length === 0 && localConfig.escribanos.length === 0) {
+                // No hay datos locales, marcar como migrado
+                localStorage.setItem(MIGRATION_FLAG, 'true');
+                return;
+            }
+
+            // Verificar si Supabase ya tiene datos (para no duplicar)
+            const { count, error } = await supabaseClient
+                .from('tramites')
+                .select('*', { count: 'exact', head: true });
+
+            if (error) {
+                console.error('Error al verificar datos en Supabase:', error);
+                showToast('No se pudo verificar la base de datos. La migración no se realizó.', 'error');
+                return;
+            }
+
+            if (count > 0) {
+                // Ya hay datos en Supabase, asumimos que ya se migró
+                localStorage.setItem(MIGRATION_FLAG, 'true');
+                return;
+            }
+
+            // ---- Migrar trámites ----
+            if (localTramites.length > 0) {
+                const rows = localTramites.map(t => ({
+                    id: t.id || Date.now().toString() + Math.random(),
+                    modulo: t.modulo || 'rpi',
+                    fecha: t.fecha,
+                    tramite: t.tramite,
+                    nombre_cliente: t.nombreCliente || '',
+                    nro_entrada: t.nroEntrada || '',
+                    urgencia: t.urgencia || 'Común',
+                    para: t.para || '',
+                    salida: t.salida || '',
+                    notas: t.notas || '',
+                    foto_data: t.fotoData || '',
+                    retirado: t.retirado || false,
+                    salida_real: t.salidaReal || null
+                }));
+
+                const { error: insErr } = await supabaseClient
+                    .from('tramites')
+                    .insert(rows);
+
+                if (insErr) {
+                    console.error('Error al migrar trámites:', insErr);
+                    showToast('Error al migrar trámites locales a Supabase.', 'error');
+                    return;
+                }
+            }
+
+            // ---- Migrar configuración ----
+            if (localConfig.tiposTramite.length > 0 || localConfig.escribanos.length > 0) {
+                try {
+                    // Tipos
+                    if (localConfig.tiposTramite.length > 0) {
+                        const tiposRows = localConfig.tiposTramite.map(t => ({
+                            id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                            nombre: t.nombre,
+                            formulario: t.formulario || '',
+                            comun: t.comun || 15,
+                            urgente: t.urgente || 48,
+                            catastral: t.catastral || false
+                        }));
+                        const { error: tErr } = await supabaseClient.from('tipos_tramite').insert(tiposRows);
+                        if (tErr) throw tErr;
+                    }
+
+                    // Escribanos
+                    if (localConfig.escribanos.length > 0) {
+                        const escrRows = localConfig.escribanos.map(e => ({
+                            id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                            nombre: e.nombre
+                        }));
+                        const { error: eErr } = await supabaseClient.from('escribanos').insert(escrRows);
+                        if (eErr) throw eErr;
+                    }
+
+                } catch (err) {
+                    console.error('Error al migrar configuración:', err);
+                    showToast('Error al migrar configuración local a Supabase.', 'error');
+                    return;
+                }
+            }
+
+            // Marcar migración como completada
+            localStorage.setItem(MIGRATION_FLAG, 'true');
+            showToast('Datos migrados exitosamente a Supabase.', 'success');
+        }
+
+        // ================================================================
+        //  3.  ADAPTACIÓN DE LA APLICACIÓN EXISTENTE
+        // ================================================================
+
+        // Variables de caché
+        let tramitesCache = [];
+        let configCache = { tiposTramite: [], escribanos: [] };
+
+        // getData() síncrono (devuelve el caché)
+        function getData() {
+            return tramitesCache;
+        }
+
+        // saveData() asíncrono: guarda en Supabase (o cola offline) y actualiza caché
+        async function saveData(tramites, options = {}) {
+            const { syncAll = false, changedId = null, silent = false } = options;
+
+            tramitesCache = tramites;
+            persistTramitesCache(tramites);
+
+            const toSync = syncAll
+                ? tramites
+                : changedId
+                    ? tramites.filter(t => t.id === changedId)
+                    : tramites;
+
+            if (!isAppOnline()) {
+                toSync.forEach(t => enqueueSync({ type: 'upsert_tramite', payload: t }));
+                if (!silent) showToast('Guardado localmente. Se sincronizará al reconectar.', 'warning');
+                return;
+            }
+
+            try {
+                for (const t of toSync) {
+                    await upsertTramiteRemote(t);
+                }
+            } catch (error) {
+                console.error('Error en saveData:', error);
+                toSync.forEach(t => enqueueSync({ type: 'upsert_tramite', payload: t }));
+                if (!silent) showToast('Sin conexión estable. Cambios guardados localmente.', 'warning');
+                throw error;
+            }
+        }
+
+        // getConfig() síncrono (devuelve caché)
+        function getConfig() {
+            return configCache;
+        }
+
+        // saveConfig() asíncrono
+        async function saveConfig(config, options = {}) {
+            const { silent = false } = options;
+            configCache = config;
+            persistConfigCache(config);
+
+            if (!isAppOnline()) {
+                enqueueSync({ type: 'save_config', payload: config });
+                if (!silent) showToast('Configuración guardada localmente. Se sincronizará al reconectar.', 'warning');
+                return;
+            }
+
+            try {
+                await saveConfigSupabaseRemote(config);
+            } catch (error) {
+                console.error('Error en saveConfig:', error);
+                enqueueSync({ type: 'save_config', payload: config });
+                if (!silent) showToast('Sin conexión estable. Configuración guardada localmente.', 'warning');
+                throw error;
+            }
+        }
+
+        // ================================================================
+        //  4.  INICIALIZACIÓN DE LA APLICACIÓN
+        // ================================================================
+
+        async function initApp() {
+            setupNetworkListeners();
+            registerServiceWorker();
+
+            const localTramites = loadTramitesFromLocalStorage();
+            const localConfig = loadConfigFromLocalStorage();
+            if (localTramites) tramitesCache = localTramites;
+            if (localConfig) configCache = localConfig;
+
+            actualizarSelectorTramite();
+
+            document.getElementById('sidebar').classList.add('closed');
+            document.getElementById('mainContent').classList.add('expanded');
+
+            navigateTo('home');
+
+            if (isAppOnline()) {
+                await migrarDesdeLocalStorage();
+
+                try {
+                    tramitesCache = await getTramites();
+                } catch (e) {
+                    if (!tramitesCache.length) tramitesCache = [];
+                }
+
+                try {
+                    configCache = await getConfigSupabase();
+                } catch (e) {
+                    if (!configCache.tiposTramite.length && !configCache.escribanos.length) {
+                        configCache = { tiposTramite: [], escribanos: [] };
+                    }
+                }
+
+                await processSyncQueue();
+            } else {
+                showToast('Modo sin conexión. Mostrando datos guardados localmente.', 'warning');
+            }
+
+            updatePendingSyncBadge();
+        }
+
+        // ================================================================
+        //  5.  FUNCIONES DE LA UI (sin cambios significativos)
+        // ================================================================
+
+        // 5.1 Navegación y sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const main = document.getElementById('mainContent');
+            const isOpen = !sidebar.classList.contains('closed');
+
+            if (isOpen) {
+                sidebar.classList.add('closed');
+                main.classList.add('expanded');
+                overlay.classList.remove('active');
+            } else {
+                sidebar.classList.remove('closed');
+                main.classList.remove('expanded');
+                if (window.innerWidth <= 768) {
+                    overlay.classList.add('active');
+                }
+            }
+        }
+
+        document.getElementById('sidebarOverlay').addEventListener('click', toggleSidebar);
+
+        let currentPage = 'home';
+        let sortColumn = 'fecha';
+        let sortDirection = 'desc';
+        let currentPhotoData = null;
+        let ocrStream = null;
+        let editingTramiteId = null;
+        let moduloActual = null;
+        let moduloFiltro = 'rpi';
+        let tramiteExpandido = null;
+        let vencimientoExpandido = null;
+
+        function navigateTo(page) {
+            currentPage = page;
+
+            document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+            document.querySelector(`.sidebar-nav a[data-page="${page}"]`)?.classList.add('active');
+
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            const pageEl = document.getElementById(`page-${page}`);
+            if (pageEl) pageEl.style.display = 'block';
+
+            const titles = { home: 'Inicio', tramites: 'Trámites', config: 'Configuración' };
+            document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
+
+            // Cerrar menú automáticamente en ordenador al seleccionar opción
+            if (window.innerWidth > 768) {
+                const sidebar = document.getElementById('sidebar');
+                const main = document.getElementById('mainContent');
+                if (!sidebar.classList.contains('closed')) {
+                    sidebar.classList.add('closed');
+                    main.classList.add('expanded');
+                }
+            } else {
+                // En móvil, si el overlay está activo, lo cerramos
+                const overlay = document.getElementById('sidebarOverlay');
+                if (overlay.classList.contains('active')) {
+                    overlay.classList.remove('active');
+                    document.getElementById('sidebar').classList.add('closed');
+                    document.getElementById('mainContent').classList.add('expanded');
+                }
+            }
+
+            if (page === 'home') {
+                if (moduloActual) {
+                    document.getElementById('moduleSelector').style.display = 'none';
+                    document.getElementById('moduleDashboard').style.display = 'block';
+                    document.getElementById('moduleTitle').textContent = moduloActual.toUpperCase();
+                    updateStats();
+                } else {
+                    document.getElementById('moduleSelector').style.display = 'block';
+                    document.getElementById('moduleDashboard').style.display = 'none';
+                }
+            }
+            if (page === 'tramites') {
+                renderTable();
+                updateFilterOptions();
+                actualizarSelectorTramite();
+            }
+            if (page === 'config') renderConfig();
+        }
+
+        // 5.2 Selección de módulo
+        function seleccionarModulo(modulo) {
+            moduloActual = modulo;
+            document.getElementById('moduleSelector').style.display = 'none';
+            document.getElementById('moduleDashboard').style.display = 'block';
+            document.getElementById('moduleTitle').textContent = modulo.toUpperCase();
+            document.getElementById('vencimientoSearchInput').value = '';
+            updateStats();
+            showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
+        }
+
+        function volverSelector() {
+            moduloActual = null;
+            document.getElementById('moduleSelector').style.display = 'block';
+            document.getElementById('moduleDashboard').style.display = 'none';
+        }
+
+        function cambiarFiltroModulo(modulo) {
+            moduloFiltro = modulo;
+            actualizarSelectorTramite();
+            renderTable();
+        }
+
+        function actualizarSelectorTramite() {
+            const buttons = document.querySelectorAll('#tramiteSelector button');
+            buttons.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === moduloFiltro) {
+                    btn.classList.add(`active-${moduloFiltro}`);
+                }
+            });
+        }
+
+        function cambiarModalModulo(modulo) {
+            document.getElementById('tramiteModulo').value = modulo;
+            const tabs = document.querySelectorAll('#modalTabs button');
+            tabs.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === modulo) {
+                    btn.classList.add('active');
+                }
+            });
+            cargarTiposTramiteModal(modulo);
+        }
+
+        // 5.3 Modo oscuro
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+            const icon = document.querySelector('.dark-mode-toggle i');
+            icon.className = isDark ? 'fas fa-sun' : 'fa-solid fa-moon';
+            document.querySelector('.dark-mode-toggle span').textContent = isDark ? 'Modo Claro' : 'Modo Oscuro';
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.dark-mode-toggle i').className = 'fas fa-sun';
+            document.querySelector('.dark-mode-toggle span').textContent = 'Modo Claro';
+        }
+
+        // 5.4 Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-triangle-exclamation',
+                info: 'fa-circle-info' };
+            toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // 5.5 Estadísticas
+        function updateStats() {
+            const tramites = getData().filter(t => t.modulo === moduloActual);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            document.getElementById('statTotal').textContent = tramites.length;
+
+            const urgentes = tramites.filter(t => t.urgencia === 'Urgente' && !t.retirado);
+            document.getElementById('statUrgentes').textContent = urgentes.length;
+
+            const pendientes = tramites.filter(t => !t.retirado);
+            document.getElementById('statPendientes').textContent = pendientes.length;
+
+            const alDia = tramites.filter(t => {
+                if (t.retirado) return false;
+                if (!t.salida) return false;
+                const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
+                return diff > 3;
+            });
+            document.getElementById('statAlDia').textContent = alDia.length;
+
+            renderVencimientos();
+        }
+
+        // 5.6 Vencimientos (NUEVO: muestra todos los trámites del módulo, ordenados por fecha descendente)
+        function renderVencimientos() {
+            const tramites = getData().filter(t => t.modulo === moduloActual);
+
+            // Ordenar por fecha descendente (más reciente primero)
+            const tramitesOrdenados = [...tramites].sort((a, b) => {
+                const fechaA = a.fecha ? new Date(a.fecha) : new Date(0);
+                const fechaB = b.fecha ? new Date(b.fecha) : new Date(0);
+                return fechaB - fechaA;
+            });
+
+            const searchTerm = document.getElementById('vencimientoSearchInput')?.value?.toLowerCase() || '';
+
+            let tramitesFiltrados = tramitesOrdenados;
+            if (searchTerm) {
+                tramitesFiltrados = tramitesFiltrados.filter(t =>
+                    (t.nombreCliente && t.nombreCliente.toLowerCase().includes(searchTerm)) ||
+                    (t.nroEntrada && t.nroEntrada.toLowerCase().includes(searchTerm)) ||
+                    (t.tramite && t.tramite.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            const vencimientosList = document.getElementById('vencimientosList');
+
+            if (tramitesFiltrados.length === 0) {
+                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites registrados.</p>';
+                return;
+            }
+
+            // Función auxiliar para formatear fecha a DD MMM YYYY (solo visual)
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
+            vencimientosList.innerHTML = tramitesFiltrados.map(t => {
+                const estado = getEstadoBadge(t);
+                const isExpanded = vencimientoExpandido === t.id;
+
+                return `
+                            <div>
+                                <div class="vencimiento-item" onclick="toggleVencimientoDetalle('${t.id}')">
+                                    <div class="vencimiento-info">
+                                        <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
+                                        <span class="detalle">${t.tramite || 'Sin tipo'} - ${t.para || 'Sin asignar'}</span>
+                                    </div>
+                                    <div class="vencimiento-estado">
+                                        <span class="status-badge ${estado.class}">${estado.text}</span>
+                                    </div>
+                                </div>
+                                <div class="vencimiento-detalle-expandido ${isExpanded ? 'mostrar' : ''}" id="vencimiento-detalle-${t.id}">
+                                    <div class="detalle-row">
+                                        <span class="detalle-label">Fecha de presentación:</span>
+                                        <span>${formatearFechaVisual(t.fecha)}</span>
+                                    </div>
+                                    <div class="detalle-row">
+                                        <span class="detalle-label">Número de expediente:</span>
+                                        <span>${t.nroEntrada || 'No registrado'}</span>
+                                    </div>
+                                    <div class="detalle-row">
+                                        <span class="detalle-label">Fecha de salida estimada:</span>
+                                        <span>${formatearFechaVisual(t.salida)}</span>
+                                    </div>
+                                </div>
+                            </div>`;
+            }).join('');
+        }
+
+        function toggleVencimientoDetalle(id) {
+            if (vencimientoExpandido === id) {
+                vencimientoExpandido = null;
+            } else {
+                vencimientoExpandido = id;
+            }
+            renderVencimientos();
+        }
+
+        // 5.7 Tabla
+        function getFilteredTramites() {
+            let tramites = getData().filter(t => t.modulo === moduloFiltro);
+            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const filterTramite = document.getElementById('filterTramite')?.value || '';
+            const filterEscribano = document.getElementById('filterEscribano')?.value || '';
+            const filterEstado = document.getElementById('filterEstado')?.value || '';
+
+            if (searchTerm) {
+                tramites = tramites.filter(t =>
+                    Object.values(t).some(v => String(v).toLowerCase().includes(searchTerm))
+                );
+            }
+            if (filterTramite) tramites = tramites.filter(t => t.tramite === filterTramite);
+            if (filterEscribano) tramites = tramites.filter(t => t.para === filterEscribano);
+
+            if (filterEstado) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                tramites = tramites.filter(t => {
+                    if (filterEstado === 'retirado') return t.retirado === true;
+                    if (t.retirado) return false;
+                    if (!t.salida) return filterEstado === 'on-time';
+                    const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
+                    if (filterEstado === 'expired') return diff < 0;
+                    if (filterEstado === 'warning') return diff >= 0 && diff <= 3;
+                    if (filterEstado === 'on-time') return diff > 3;
+                    return true;
+                });
+            }
+
+            tramites.sort((a, b) => {
+                let valA = a[sortColumn] || '';
+                let valB = b[sortColumn] || '';
+                if (sortColumn === 'fecha' || sortColumn === 'salida') {
+                    valA = new Date(valA || 0);
+                    valB = new Date(valB || 0);
+                }
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            return tramites;
+        }
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            renderTable();
+        }
+
+        function getEstadoBadge(tramite) {
+            if (tramite.retirado) return { class: 'retirado', text: 'Retirado' };
+            if (!tramite.salida) return { class: 'on-time', text: 'Pendiente' };
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diff = Math.ceil((new Date(tramite.salida) - today) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return { class: 'expired', text: 'Finalizado' };
+            if (diff <= 3) return { class: 'warning', text: 'Por Salir' };
+            return { class: 'on-time', text: 'Pendiente' };
+        }
+
+        function renderTable() {
+            const tramites = getFilteredTramites();
+            const tbody = document.getElementById('tableBody');
+
+            // Función auxiliar para formatear fecha a DD MMM YYYY (solo visual)
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
+            if (tramites.length === 0) {
+                tbody.innerHTML = `
+                            <tr class="empty-state">
+                                <td colspan="12">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>No se encontraron trámites</p>
+                                </td>
+                            </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = tramites.map(t => {
+                const estado = getEstadoBadge(t);
+                const urgenciaClass = t.urgencia === 'Urgente' ? 'urgent-indicator' : '';
+                const isChecked = t.retirado ? 'checked' : '';
+                const moduloClass = t.modulo || 'rpi';
+
+                return `
+                            <tr onclick="abrirDetalle('${t.id}')">
+                                <td>${formatearFechaVisual(t.fecha)}</td>
+                                <td>${t.tramite || '-'}</td>
+                                <td>${t.nombreCliente || '-'}</td>
+                                <td>${t.nroEntrada || '-'}</td>
+                                <td class="${urgenciaClass}">${t.urgencia || 'Común'}</td>
+                                <td>${t.para || '-'}</td>
+                                <td onclick="event.stopPropagation(); openEditarSalidaModal('${t.id}')" style="cursor:pointer; color:var(--accent); text-decoration:underline;">${formatearFechaVisual(t.salida)}</td>
+                                <td><span class="status-badge ${estado.class}">${estado.text}</span></td>
+                                <td><span class="badge-modulo ${moduloClass}">${moduloClass.toUpperCase()}</span></td>
+                                <td style="max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${t.notas || ''}">${t.notas || '-'}</td>
+                                <td>${t.fotoData ? `<img src="${t.fotoData}" class="photo-thumb" onclick="event.stopPropagation(); viewPhoto('${t.id}')" alt="Foto">` : '-'}</td>
+                                <td class="actions-cell" onclick="event.stopPropagation();">
+                                    <input type="checkbox" ${isChecked} onchange="toggleRetirado('${t.id}', this.checked)" title="Marcar como retirado">
+                                    <button class="btn btn-sm btn-icon" onclick="openTramiteModal('${t.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTramite('${t.id}')" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>`;
+            }).join('');
+        }
+
+        async function toggleRetirado(id, checked) {
+            try {
+                let tramites = getData();
+                const tramite = tramites.find(t => t.id === id);
+                if (tramite) {
+                    tramite.retirado = checked;
+                    if (checked && !tramite.salidaReal) {
+                        tramite.salidaReal = new Date().toISOString().split('T')[0];
+                    }
+                    await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
+                    renderTable();
+                    if (moduloActual) updateStats();
+                    if (isAppOnline()) {
+                        showToast(checked ? 'Trámite marcado como retirado.' : 'Trámite desmarcado como retirado.', 'info');
+                    }
+                }
+            } catch (error) {
+                showToast('Error al actualizar el estado del trámite.', 'error');
+            }
+        }
+
+        function updateFilterOptions() {
+            const tramites = getData().filter(t => t.modulo === moduloFiltro);
+
+            const filterTramite = document.getElementById('filterTramite');
+            filterTramite.innerHTML = '<option value="">Todos los trámites</option>' +
+                [...new Set(tramites.map(t => t.tramite))].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+
+            const filterEscribano = document.getElementById('filterEscribano');
+            filterEscribano.innerHTML = '<option value="">Todos los escribanos</option>' +
+                [...new Set(tramites.map(t => t.para).filter(Boolean))].sort().map(e => `<option value="${e}">${e}</option>`)
+                .join('');
+        }
+
+        // 5.8 Detalle
+        function abrirDetalle(id) {
+            const tramite = getData().find(t => t.id === id);
+            if (!tramite) return;
+
+            const modal = document.getElementById('detalleModalOverlay');
+            const contenido = document.getElementById('detalleContenido');
+
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
+            contenido.innerHTML = `
+                        <div class="detalle-tramite">
+                            <h4>${tramite.tramite || 'Sin tipo'}</h4>
+                            <div class="detalle-tramite-grid">
+                                <span class="label">Fecha de Ingreso:</span>
+                                <span class="value">${formatearFechaVisual(tramite.fecha)}</span>
+                                <span class="label">N° Expediente / Entrada:</span>
+                                <span class="value">${tramite.nroEntrada || '-'}</span>
+                                <span class="label">Nombre / Cliente:</span>
+                                <span class="value">${tramite.nombreCliente || '-'}</span>
+                                <span class="label">Escribano:</span>
+                                <span class="value">${tramite.para || '-'}</span>
+                                <span class="label">Urgencia:</span>
+                                <span class="value">${tramite.urgencia || 'Común'}</span>
+                                <span class="label">Fecha de Salida:</span>
+                                <span class="value">${formatearFechaVisual(tramite.salida)}</span>
+                                <span class="label">Módulo:</span>
+                                <span class="value"><span class="badge-modulo ${tramite.modulo || 'rpi'}">${(tramite.modulo || 'rpi').toUpperCase()}</span></span>
+                                <span class="label">Estado:</span>
+                                <span class="value"><span class="status-badge ${getEstadoBadge(tramite).class}">${getEstadoBadge(tramite).text}</span></span>
+                                <span class="label">Notas:</span>
+                                <span class="value">${tramite.notas || '-'}</span>
+                            </div>
+                            ${tramite.fotoData ? `<div style="margin-top:12px;"><img src="${tramite.fotoData}" style="max-width:200px; border-radius:8px; border:2px solid var(--border);"></div>` : ''}
+                        </div>
+                    `;
+
+            modal.classList.add('active');
+        }
+
+        function closeDetalleModal() {
+            document.getElementById('detalleModalOverlay').classList.remove('active');
+        }
+
+        // 5.9 Modal Trámite
+        function openTramiteModal(id = null) {
+            editingTramiteId = id;
+            const modal = document.getElementById('tramiteModalOverlay');
+            const title = document.getElementById('tramiteModalTitle');
+            const form = document.getElementById('tramiteForm');
+
+            form.reset();
+            document.getElementById('tramiteId').value = '';
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('removePhotoBtn').style.display = 'none';
+            document.getElementById('tramiteFotoData').value = '';
+            currentPhotoData = null;
+
+            const moduloInicial = moduloFiltro || 'rpi';
+            document.getElementById('tramiteModulo').value = moduloInicial;
+
+            const tabs = document.querySelectorAll('#modalTabs button');
+            tabs.forEach(btn => {
+                btn.className = '';
+                if (btn.dataset.modulo === moduloInicial) {
+                    btn.classList.add('active');
+                }
+            });
+
+            cargarTiposTramiteModal(moduloInicial);
+            cargarEscribanos();
+
+            if (id) {
+                title.textContent = 'Editar Trámite';
+                const tramite = getData().find(t => t.id === id);
+                if (tramite) {
+                    document.getElementById('tramiteId').value = tramite.id;
+                    document.getElementById('tramiteModulo').value = tramite.modulo || 'rpi';
+                    document.getElementById('tramiteFecha').value = tramite.fecha || '';
+                    document.getElementById('tramiteTipo').value = tramite.tramite || '';
+                    document.getElementById('tramiteNombreCliente').value = tramite.nombreCliente || '';
+                    document.getElementById('tramiteNroEntrada').value = tramite.nroEntrada || '';
+                    document.getElementById('tramiteUrgencia').value = tramite.urgencia || 'Común';
+                    document.getElementById('tramitePara').value = tramite.para || '';
+                    document.getElementById('tramiteSalida').value = tramite.salida || '';
+                    document.getElementById('tramiteNotas').value = tramite.notas || '';
+
+                    const mod = tramite.modulo || 'rpi';
+                    tabs.forEach(btn => {
+                        btn.className = '';
+                        if (btn.dataset.modulo === mod) {
+                            btn.classList.add('active');
+                        }
+                    });
+                    cargarTiposTramiteModal(mod);
+
+                    if (tramite.fotoData) {
+                        currentPhotoData = tramite.fotoData;
+                        document.getElementById('photoPreview').src = tramite.fotoData;
+                        document.getElementById('photoPreview').style.display = 'block';
+                        document.getElementById('removePhotoBtn').style.display = 'inline-flex';
+                        document.getElementById('tramiteFotoData').value = tramite.fotoData;
+                    }
+                }
+            } else {
+                title.textContent = 'Nuevo Trámite';
+                document.getElementById('tramiteFecha').value = new Date().toISOString().split('T')[0];
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeTramiteModal() {
+            document.getElementById('tramiteModalOverlay').classList.remove('active');
+            editingTramiteId = null;
+        }
+
+        function cargarTiposTramiteModal(modulo) {
+            const config = getConfig();
+            const tipoSelect = document.getElementById('tramiteTipo');
+            const opciones = config.tiposTramite.filter(t => {
+                if (modulo === 'rpi') return !t.catastral;
+                return t.catastral === true;
+            });
+            tipoSelect.innerHTML = '<option value="">Seleccionar...</option>' +
+                opciones.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
+        }
+
+        function cargarEscribanos() {
+            const config = getConfig();
+            const paraSelect = document.getElementById('tramitePara');
+            paraSelect.innerHTML = '<option value="">Seleccionar...</option>' +
+                config.escribanos.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+        }
+
+        function calcularSalida() {
+            const tipoNombre = document.getElementById('tramiteTipo').value;
+            const urgencia = document.getElementById('tramiteUrgencia').value;
+            const fechaInput = document.getElementById('tramiteFecha').value;
+
+            if (!tipoNombre || !fechaInput) return;
+
+            const config = getConfig();
+            const tipoTramite = config.tiposTramite.find(t => t.nombre === tipoNombre);
+            if (!tipoTramite) return;
+
+            const fechaBase = new Date(fechaInput + 'T00:00:00');
+            if (urgencia === 'Urgente') {
+                fechaBase.setHours(fechaBase.getHours() + parseInt(tipoTramite.urgente) || 48);
+            } else {
+                fechaBase.setDate(fechaBase.getDate() + parseInt(tipoTramite.comun) || 15);
+            }
+
+            document.getElementById('tramiteSalida').value = fechaBase.toISOString().split('T')[0];
+        }
+
+        async function saveTramite(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('tramiteId').value;
+            const modulo = document.getElementById('tramiteModulo').value;
+
+            const tramite = {
+                id: id || Date.now().toString(),
+                modulo: modulo,
+                fecha: document.getElementById('tramiteFecha').value,
+                tramite: document.getElementById('tramiteTipo').value,
+                nombreCliente: document.getElementById('tramiteNombreCliente').value,
+                nroEntrada: document.getElementById('tramiteNroEntrada').value,
+                urgencia: document.getElementById('tramiteUrgencia').value,
+                para: document.getElementById('tramitePara').value,
+                salida: document.getElementById('tramiteSalida').value,
+                notas: document.getElementById('tramiteNotas').value,
+                fotoData: document.getElementById('tramiteFotoData').value || currentPhotoData || '',
+                retirado: false
+            };
+
+            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente) {
+                showToast('Por favor complete los campos obligatorios (Fecha, Trámite, Nombre/Cliente y Para).', 'error');
+                return;
+            }
+
+            try {
+                let tramites = getData();
+
+                if (id) {
+                    const index = tramites.findIndex(t => t.id === id);
+                    if (index >= 0) {
+                        const existing = tramites[index];
+                        tramite.retirado = existing.retirado || false;
+                        tramite.salidaReal = existing.salidaReal || '';
+                        tramites[index] = tramite;
+                    }
+                } else {
+                    tramites.unshift(tramite);
+                }
+
+                await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
+
+                closeTramiteModal();
+                renderTable();
+                updateFilterOptions();
+                if (moduloActual) updateStats();
+                if (isAppOnline()) {
+                    showToast(id ? 'Trámite actualizado correctamente.' : 'Trámite agregado correctamente.', 'success');
+                }
+            } catch (error) {
+                showToast('Error al guardar el trámite. Intente nuevamente.', 'error');
+            }
+        }
+
+        async function deleteTramite(id) {
+            if (!confirm('¿Está seguro de eliminar este trámite? Esta acción no se puede deshacer.')) return;
+
+            try {
+                const tramites = getData().filter(t => t.id !== id);
+                tramitesCache = tramites;
+                persistTramitesCache(tramites);
+
+                if (!isAppOnline()) {
+                    enqueueSync({ type: 'delete_tramite', payload: { id } });
+                    renderTable();
+                    updateFilterOptions();
+                    if (moduloActual) updateStats();
+                    showToast('Trámite eliminado localmente. Se sincronizará al reconectar.', 'warning');
+                    return;
+                }
+
+                await deleteTramiteRemote(id);
+                renderTable();
+                updateFilterOptions();
+                if (moduloActual) updateStats();
+                showToast('Trámite eliminado correctamente.', 'success');
+            } catch (error) {
+                enqueueSync({ type: 'delete_tramite', payload: { id } });
+                showToast('Eliminado localmente. Se sincronizará al reconectar.', 'warning');
+            }
+        }
+
+        function viewPhoto(id) {
+            const tramite = getData().find(t => t.id === id);
+            if (tramite?.fotoData) {
+                const win = window.open('', '_blank');
+                win.document.write(`<img src="${tramite.fotoData}" style="max-width:100%; height:auto;">`);
+            }
+        }
+
+        // 5.10 Editar Salida
+        let editingSalidaId = null;
+
+        function openEditarSalidaModal(id) {
+            const tramite = getData().find(t => t.id === id);
+            if (!tramite) return;
+
+            editingSalidaId = id;
+            document.getElementById('editarSalidaId').value = id;
+            document.getElementById('editarSalidaFecha').value = tramite.salidaReal || tramite.salida || '';
+            document.getElementById('editarSalidaModalOverlay').classList.add('active');
+        }
+
+        function closeEditarSalidaModal() {
+            document.getElementById('editarSalidaModalOverlay').classList.remove('active');
+            editingSalidaId = null;
+        }
+
+        async function saveEditarSalida(event) {
+            event.preventDefault();
+            const id = document.getElementById('editarSalidaId').value;
+            const fecha = document.getElementById('editarSalidaFecha').value;
+
+            if (!fecha) {
+                showToast('Por favor seleccione una fecha.', 'error');
+                return;
+            }
+
+            try {
+                let tramites = getData();
+                const tramite = tramites.find(t => t.id === id);
+                if (tramite) {
+                    tramite.salidaReal = fecha;
+                    tramite.salida = fecha;
+                    await saveData(tramites, { changedId: tramite.id, silent: !isAppOnline() });
+                    closeEditarSalidaModal();
+                    renderTable();
+                    if (moduloActual) updateStats();
+                    if (isAppOnline()) {
+                        showToast('Fecha de salida actualizada correctamente.', 'success');
+                    }
+                }
+            } catch (error) {
+                showToast('Error al actualizar la fecha de salida.', 'error');
+            }
+        }
+
+        // 5.11 Fotografías
+        function openCamera() {
+            const input = document.getElementById('photoFileInput');
+            input.setAttribute('capture', 'environment');
+            input.click();
+        }
+
+        function handlePhotoSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentPhotoData = e.target.result;
+                document.getElementById('photoPreview').src = currentPhotoData;
+                document.getElementById('photoPreview').style.display = 'block';
+                document.getElementById('removePhotoBtn').style.display = 'inline-flex';
+                document.getElementById('tramiteFotoData').value = currentPhotoData;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removePhoto() {
+            currentPhotoData = null;
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('removePhotoBtn').style.display = 'none';
+            document.getElementById('tramiteFotoData').value = '';
+        }
+
+        // 5.12 OCR
+        async function openOCRScanner() {
+            const modal = document.getElementById('ocrModalOverlay');
+            modal.classList.add('active');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                ocrStream = stream;
+                const video = document.getElementById('ocrVideo');
+                video.srcObject = stream;
+                document.getElementById('ocrResults').style.display = 'none';
+            } catch (err) {
+                showToast('Error al acceder a la cámara. Verifique los permisos.', 'error');
+                closeOCRScanner();
+            }
+        }
+
+        function closeOCRScanner() {
+            if (ocrStream) {
+                ocrStream.getTracks().forEach(track => track.stop());
+                ocrStream = null;
+            }
+            document.getElementById('ocrModalOverlay').classList.remove('active');
+        }
+
+        async function captureOCR() {
+            const video = document.getElementById('ocrVideo');
+            const canvas = document.getElementById('ocrCanvas');
+            const resultsDiv = document.getElementById('ocrResults');
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            showToast('Procesando imagen...', 'info');
+
+            try {
+                const { data: { text } } = await Tesseract.recognize(canvas, 'eng+spa', {
+                    logger: m => console.log(m)
+                });
+
+                const numeros = text.match(/\d+/g) || [];
+                const numerosUnicos = [...new Set(numeros)].filter(n => n.length >= 2);
+
+                if (numerosUnicos.length === 0) {
+                    resultsDiv.innerHTML = '<p style="color: var(--text-secondary);">No se detectaron números.</p>';
+                    resultsDiv.style.display = 'block';
+                    showToast('No se detectaron números en la imagen.', 'warning');
+                    return;
+                }
+
+                if (numerosUnicos.length === 1) {
+                    document.getElementById('tramiteNroEntrada').value = numerosUnicos[0];
+                    closeOCRScanner();
+                    showToast('Número detectado: ' + numerosUnicos[0], 'success');
+                } else {
+                    resultsDiv.innerHTML = `
+                                <p style="font-weight:600; margin-bottom:8px;">Seleccione el número correcto:</p>
+                                ${numerosUnicos.map(n => `
+                                    <div class="ocr-result-item" onclick="selectOCRNumber('${n}')">
+                                        <i class="fas fa-hashtag"></i> ${n}
+                                    </div>
+                                `).join('')}
+                            `;
+                    resultsDiv.style.display = 'block';
+                }
+            } catch (err) {
+                showToast('Error al procesar la imagen.', 'error');
+                console.error(err);
+            }
+        }
+
+        function selectOCRNumber(number) {
+            document.getElementById('tramiteNroEntrada').value = number;
+            closeOCRScanner();
+            showToast('Número seleccionado: ' + number, 'success');
+        }
+
+        // 5.13 Configuración
+        function renderConfig() {
+            const config = getConfig();
+
+            const tiposList = document.getElementById('tiposTramiteList');
+            if (config.tiposTramite.length === 0) {
+                tiposList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay tipos de trámite configurados.</li>';
+            } else {
+                tiposList.innerHTML = config.tiposTramite.map((t, i) => `
+                            <li>
+                                <div class="item-info">
+                                    <strong>${t.nombre}</strong>
+                                    ${t.formulario ? `<span style="color:var(--text-secondary);"> (Form. ${t.formulario})</span>` : ''}
+                                    <br><small>Común: ${t.comun} días | Urgente: ${t.urgente} horas</small>
+                                    <br><span class="badge-modulo ${t.catastral ? 'catastro' : 'rpi'}">${t.catastral ? 'Catastro' : 'RPI'}</span>
+                                </div>
+                                <div class="item-actions">
+                                    <button class="btn btn-sm btn-icon" onclick="openTipoTramiteModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTipoTramite(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </li>
+                        `).join('');
+            }
+
+            const escribanosList = document.getElementById('escribanosList');
+            if (config.escribanos.length === 0) {
+                escribanosList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay escribanos configurados.</li>';
+            } else {
+                escribanosList.innerHTML = config.escribanos.map((e, i) => `
+                            <li>
+                                <div class="item-info"><strong>${e.nombre}</strong></div>
+                                <div class="item-actions">
+                                    <button class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEscribano(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </li>
+                        `).join('');
+            }
+        }
+
+        function openTipoTramiteModal(index = null) {
+            const modal = document.getElementById('tipoTramiteModalOverlay');
+            const title = document.getElementById('tipoTramiteModalTitle');
+            const form = document.getElementById('tipoTramiteForm');
+            form.reset();
+            document.getElementById('tipoTramiteId').value = '';
+            document.getElementById('tipoTramiteCatastral').checked = false;
+
+            if (index !== null && index >= 0) {
+                title.textContent = 'Editar Tipo de Trámite';
+                const config = getConfig();
+                const tipo = config.tiposTramite[index];
+                if (tipo) {
+                    document.getElementById('tipoTramiteId').value = index;
+                    document.getElementById('tipoTramiteNombre').value = tipo.nombre;
+                    document.getElementById('tipoTramiteFormulario').value = tipo.formulario || '';
+                    document.getElementById('tipoTramiteComun').value = tipo.comun;
+                    document.getElementById('tipoTramiteUrgente').value = tipo.urgente;
+                    document.getElementById('tipoTramiteCatastral').checked = tipo.catastral || false;
+                }
+            } else {
+                title.textContent = 'Nuevo Tipo de Trámite';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeTipoTramiteModal() {
+            document.getElementById('tipoTramiteModalOverlay').classList.remove('active');
+        }
+
+        async function saveTipoTramite(event) {
+            event.preventDefault();
+            const index = document.getElementById('tipoTramiteId').value;
+            const tipo = {
+                nombre: document.getElementById('tipoTramiteNombre').value.trim(),
+                formulario: document.getElementById('tipoTramiteFormulario').value.trim(),
+                comun: parseInt(document.getElementById('tipoTramiteComun').value) || 15,
+                urgente: parseInt(document.getElementById('tipoTramiteUrgente').value) || 48,
+                catastral: document.getElementById('tipoTramiteCatastral').checked
+            };
+
+            if (!tipo.nombre) {
+                showToast('El nombre del trámite es obligatorio.', 'error');
+                return;
+            }
+
+            try {
+                const config = getConfig();
+
+                const duplicate = config.tiposTramite.find((t, i) => t.nombre.toLowerCase() === tipo.nombre.toLowerCase() && i !==
+                    parseInt(index));
+                if (duplicate) {
+                    showToast('Ya existe un tipo de trámite con ese nombre.', 'warning');
+                    return;
+                }
+
+                if (index !== '' && index >= 0) {
+                    config.tiposTramite[index] = tipo;
+                } else {
+                    config.tiposTramite.push(tipo);
+                }
+
+                await saveConfig(config);
+                closeTipoTramiteModal();
+                renderConfig();
+                showToast('Tipo de trámite guardado correctamente.', 'success');
+            } catch (error) {
+                showToast('Error al guardar el tipo de trámite.', 'error');
+            }
+        }
+
+        async function deleteTipoTramite(index) {
+            if (!confirm('¿Eliminar este tipo de trámite?')) return;
+            try {
+                const config = getConfig();
+                config.tiposTramite.splice(index, 1);
+                await saveConfig(config);
+                renderConfig();
+                showToast('Tipo de trámite eliminado.', 'success');
+            } catch (error) {
+                showToast('Error al eliminar el tipo de trámite.', 'error');
+            }
+        }
+
+        function openEscribanoModal(index = null) {
+            const modal = document.getElementById('escribanoModalOverlay');
+            const title = document.getElementById('escribanoModalTitle');
+            const form = document.getElementById('escribanoForm');
+            form.reset();
+            document.getElementById('escribanoId').value = '';
+
+            if (index !== null && index >= 0) {
+                title.textContent = 'Editar Escribano';
+                const config = getConfig();
+                const escribano = config.escribanos[index];
+                if (escribano) {
+                    document.getElementById('escribanoId').value = index;
+                    document.getElementById('escribanoNombre').value = escribano.nombre;
+                }
+            } else {
+                title.textContent = 'Nuevo Escribano';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeEscribanoModal() {
+            document.getElementById('escribanoModalOverlay').classList.remove('active');
+        }
+
+        async function saveEscribano(event) {
+            event.preventDefault();
+            const index = document.getElementById('escribanoId').value;
+            const nombre = document.getElementById('escribanoNombre').value.trim();
+
+            if (!nombre) {
+                showToast('El nombre del escribano es obligatorio.', 'error');
+                return;
+            }
+
+            try {
+                const config = getConfig();
+                const duplicate = config.escribanos.find((e, i) => e.nombre.toLowerCase() === nombre.toLowerCase() && i !== parseInt(
+                    index));
+                if (duplicate) {
+                    showToast('Ya existe un escribano con ese nombre.', 'warning');
+                    return;
+                }
+
+                const escribano = { nombre };
+
+                if (index !== '' && index >= 0) {
+                    config.escribanos[index] = escribano;
+                } else {
+                    config.escribanos.push(escribano);
+                }
+
+                await saveConfig(config);
+                closeEscribanoModal();
+                renderConfig();
+                showToast('Escribano guardado correctamente.', 'success');
+            } catch (error) {
+                showToast('Error al guardar el escribano.', 'error');
+            }
+        }
+
+        async function deleteEscribano(index) {
+            if (!confirm('¿Eliminar este escribano?')) return;
+            try {
+                const config = getConfig();
+                config.escribanos.splice(index, 1);
+                await saveConfig(config);
+                renderConfig();
+                showToast('Escribano eliminado.', 'success');
+            } catch (error) {
+                showToast('Error al eliminar el escribano.', 'error');
+            }
+        }
+
+        // 5.14 Exportar / Importar
+        function exportToExcel() {
+            const tramites = getFilteredTramites();
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
+            const data = tramites.map(t => ({
+                Fecha: formatearFechaVisual(t.fecha),
+                Trámite: t.tramite,
+                'Nombre / Cliente': t.nombreCliente,
+                'N° Entrada / Expediente': t.nroEntrada,
+                Urgencia: t.urgencia,
+                Para: t.para,
+                Salida: formatearFechaVisual(t.salida),
+                Notas: t.notas,
+                Módulo: t.modulo || 'RPI',
+                Retirado: t.retirado ? 'Sí' : 'No'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Trámites');
+            XLSX.writeFile(wb, `tramites_${moduloFiltro}.xlsx`);
+            showToast('Exportado a Excel correctamente.', 'success');
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape');
+
+            const tramites = getFilteredTramites();
+            // Función auxiliar para formatear fecha a DD MMM YYYY
+            function formatearFechaVisual(fechaStr) {
+                if (!fechaStr) return '-';
+                try {
+                    const fecha = new Date(fechaStr + 'T00:00:00');
+                    if (isNaN(fecha)) return fechaStr;
+                    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = meses[fecha.getMonth()];
+                    const año = fecha.getFullYear();
+                    return `${dia} ${mes} ${año}`;
+                } catch {
+                    return fechaStr;
+                }
+            }
+
+            const rows = tramites.map(t => [
+                formatearFechaVisual(t.fecha), t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para,
+                formatearFechaVisual(t.salida), t.notas || '', t.modulo || 'RPI', t.retirado ? 'Retirado' : 'Pendiente'
+            ]);
+
+            doc.autoTable({
+                head: [
+                    ['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Para', 'Salida', 'Notas', 'Módulo',
+                        'Estado'
+                    ]
+                ],
+                body: rows,
+                styles: { fontSize: 7 },
+                headStyles: { fillColor: [91, 127, 149] }
+            });
+
+            doc.save(`tramites_${moduloFiltro}.pdf`);
+            showToast('Exportado a PDF correctamente.', 'success');
+        }
+
+        function importFromExcel() {
+            document.getElementById('importFileInput').click();
+        }
+
+        function handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+                    let tramites = getData();
+                    let count = 0;
+
+                    jsonData.forEach(row => {
+                        if (row['Trámite'] || row['tramite']) {
+                            const modulo = row['Módulo'] || row['modulo'] || moduloFiltro || 'rpi';
+                            tramites.unshift({
+                                id: Date.now().toString() + Math.random(),
+                                modulo: modulo.toLowerCase(),
+                                fecha: row['Fecha'] || row['fecha'] || '',
+                                tramite: row['Trámite'] || row['tramite'] || '',
+                                nombreCliente: row['Nombre / Cliente'] || row['nombreCliente'] || row[
+                                    'Nombre/Cliente'] || '',
+                                nroEntrada: row['N° Entrada / Expediente'] || row['nroEntrada'] || row[
+                                    'N° Entrada'] || '',
+                                urgencia: row['Urgencia'] || row['urgencia'] || 'Común',
+                                para: row['Para'] || row['para'] || '',
+                                salida: row['Salida'] || row['salida'] || '',
+                                notas: row['Notas'] || row['notas'] || '',
+                                fotoData: '',
+                                retirado: false
+                            });
+                            count++;
+                        }
+                    });
+
+                    await saveData(tramites, { syncAll: true });
+                    renderTable();
+                    updateFilterOptions();
+                    if (moduloActual) updateStats();
+                    showToast(`Importados ${count} trámites correctamente.`, 'success');
+                } catch (err) {
+                    showToast('Error al importar el archivo.', 'error');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        function exportBackup() {
+            const data = {
+                tramites: getData(),
+                config: getConfig(),
+                version: '2.0',
+                fecha: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_escribania_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Backup exportado correctamente.', 'success');
+        }
+
+        function handleRestoreBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!confirm('¿Restaurar backup? Los datos actuales serán reemplazados.')) {
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.tramites && data.config) {
+                        await saveData(data.tramites, { syncAll: true });
+                        await saveConfig(data.config);
+                        renderTable();
+                        updateFilterOptions();
+                        if (moduloActual) updateStats();
+                        renderConfig();
+                        showToast('Backup restaurado correctamente.', 'success');
+                    } else {
+                        showToast('Archivo de backup inválido.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Error al leer el archivo de backup.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // 5.15 Cierre de modales con ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeTramiteModal();
+                closeOCRScanner();
+                closeTipoTramiteModal();
+                closeEscribanoModal();
+                closeEditarSalidaModal();
+                closeDetalleModal();
+            }
+        });
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    if (this.id === 'tramiteModalOverlay') closeTramiteModal();
+                    if (this.id === 'ocrModalOverlay') closeOCRScanner();
+                    if (this.id === 'tipoTramiteModalOverlay') closeTipoTramiteModal();
+                    if (this.id === 'escribanoModalOverlay') closeEscribanoModal();
+                    if (this.id === 'editarSalidaModalOverlay') closeEditarSalidaModal();
+                    if (this.id === 'detalleModalOverlay') closeDetalleModal();
+                }
+            });
+        });
+
+        // 5.16 Arranque
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebarOverlay').classList.remove('active');
+            }
+        });
+
+        // Iniciar la aplicación
+        initApp();
+    </script>
+
+</body>
+</html>
