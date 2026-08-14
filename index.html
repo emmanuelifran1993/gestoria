@@ -2048,8 +2048,8 @@
                             <div>
                                 <div class="vencimiento-item" onclick="toggleVencimientoDetalle('${t.id}')">
                                     <div class="vencimiento-info">
-                                        <span class="nombre">${t.tramite || 'Sin tipo'}</span>
-                                        <span class="detalle">${t.para || 'Sin asignar'} ${t.nombreCliente ? ' - ' + t.nombreCliente : ''}</span>
+                                        <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
+                                        <span class="detalle">${t.tramite || 'Sin tipo'} - ${t.para || 'Sin asignar'}</span>
                                     </div>
                                     <div class="vencimiento-estado">
                                         <span class="status-badge ${estado.class}">${estado.text}</span>
