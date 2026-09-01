@@ -1272,7 +1272,7 @@
                         <option value="">Todos los estados</option>
                         <option value="on-time">Al día</option>
                         <option value="warning">Próximo a finalizar</option>
-                        <option value="expired">Finalizado</option>
+                        <option value="expired">Para retirar</option>
                         <option value="retirado">Retirado</option>
                     </select>
                 </div>
@@ -2661,7 +2661,7 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const diff = Math.ceil((new Date(tramite.salida) - today) / (1000 * 60 * 60 * 24));
-            if (diff < 0) return { class: 'expired', text: 'Finalizado' };
+            if (diff < 0) return { class: 'expired', text: 'Para retirar' };
             if (diff <= 3) return { class: 'warning', text: 'Por Salir' };
             return { class: 'on-time', text: 'Pendiente' };
         }
