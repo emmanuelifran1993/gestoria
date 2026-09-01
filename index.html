@@ -874,6 +874,33 @@
             display: flex;
             gap: 6px;
         }
+        .config-list li.escribano-item {
+            cursor: default;
+        }
+        .config-list li.escribano-item.dragging {
+            opacity: 0.5;
+        }
+        .config-list li.escribano-item.drag-over {
+            background: var(--hover-row);
+            border-top: 2px solid var(--accent);
+        }
+        .config-list .drag-handle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            color: var(--text-secondary);
+            cursor: grab;
+            flex-shrink: 0;
+        }
+        .config-list .drag-handle:active {
+            cursor: grabbing;
+        }
+        .config-list .config-hint {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0 0 8px 0;
+        }
         .checkbox-label {
             display: flex;
             align-items: center;
@@ -1281,7 +1308,8 @@
                 </button>
             </div>
             <div class="config-section">
-                <h3><i class="fas fa-user-tie"></i> Escribanos</h3>
+                <h3><i class="fas fa-user-tie"></i> Solicitante</h3>
+                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Arrastrá los solicitantes para cambiar el orden en la lista "Para".</p>
                 <ul class="config-list" id="escribanosList"></ul>
                 <button class="btn btn-primary" onclick="openEscribanoModal()" style="margin-top:12px;">
                     <i class="fas fa-plus"></i> Agregar Escribano
@@ -1317,7 +1345,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Fecha *</label>
-                        <input type="date" id="tramiteFecha" required>
+                        <input type="date" id="tramiteFecha" required onchange="calcularSalida()">
                     </div>
                     <div class="form-group">
                         <label>Tipo de Trámite *</label>
@@ -1348,7 +1376,7 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Para (Escribano) *</label>
+                        <label>Para *</label>
                         <select id="tramitePara" required>
                             <option value="">Seleccionar...</option>
                         </select>
@@ -1358,7 +1386,7 @@
                     <div class="form-group">
                         <label>Fecha de Salida (Estimada)</label>
                         <input type="date" id="tramiteSalida" readonly style="background-color:var(--hover-row);">
-                        <small style="color:var(--text-secondary); display:block; margin-top:4px;">Calculada automáticamente según tipo de trámite y urgencia</small>
+                        <small style="color:var(--text-secondary); display:block; margin-top:4px;">Calculada automáticamente según tipo de trámite y urgencia (días hábiles, sin sábados ni domingos)</small>
                     </div>
                     <div class="form-group">
                         <label>Notas</label>
@@ -1426,8 +1454,8 @@
                         <input type="number" id="tipoTramiteComun" required min="1" placeholder="15">
                     </div>
                     <div class="form-group">
-                        <label>Tiempo Urgente (horas) *</label>
-                        <input type="number" id="tipoTramiteUrgente" required min="1" placeholder="48">
+                        <label>Tiempo Urgente (días) *</label>
+                        <input type="number" id="tipoTramiteUrgente" required min="1" placeholder="2">
                     </div>
                 </div>
                 <div class="form-group">
@@ -1851,17 +1879,48 @@
 
             if (errTipos) throw errTipos;
 
-            const { data: escribanos, error: errEscr } = await supabaseClient
+            let escribanos = [];
+            const { data: escrOrden, error: errEscrOrden } = await supabaseClient
                 .from('escribanos')
                 .select('*')
-                .order('nombre');
+                .order('orden', { ascending: true });
 
-            if (errEscr) throw errEscr;
+            if (errEscrOrden) {
+                const { data: escrNombre, error: errEscrNombre } = await supabaseClient
+                    .from('escribanos')
+                    .select('*')
+                    .order('nombre');
+
+                if (errEscrNombre) throw errEscrNombre;
+                escribanos = normalizarOrdenEscribanos(escrNombre || []);
+            } else {
+                escribanos = normalizarOrdenEscribanos(escrOrden || []);
+            }
 
             return {
                 tiposTramite: tipos || [],
-                escribanos: escribanos || []
+                escribanos
             };
+        }
+
+        function normalizarOrdenEscribanos(escribanos) {
+            const conIndice = escribanos.map((escribano, index) => ({ escribano, index }));
+
+            conIndice.sort((a, b) => {
+                const ordenA = Number.isFinite(a.escribano.orden) ? a.escribano.orden : a.index;
+                const ordenB = Number.isFinite(b.escribano.orden) ? b.escribano.orden : b.index;
+                if (ordenA !== ordenB) return ordenA - ordenB;
+                return (a.escribano.nombre || '').localeCompare(b.escribano.nombre || '', 'es', { sensitivity: 'base' });
+            });
+
+            return conIndice.map(({ escribano }, index) => ({
+                ...escribano,
+                orden: index
+            }));
+        }
+
+        function getEscribanosOrdenados(config = getConfig()) {
+            return normalizarOrdenEscribanos(config.escribanos || []);
         }
 
         async function getConfigSupabase() {
@@ -1915,12 +1974,24 @@
             if (delEscr) throw delEscr;
 
             if (config.escribanos.length > 0) {
-                const { error: insEscr } = await supabaseClient
+                const rowsWithOrden = config.escribanos.map((e, index) => ({
+                    id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                    nombre: e.nombre,
+                    orden: Number.isFinite(e.orden) ? e.orden : index
+                }));
+
+                let { error: insEscr } = await supabaseClient
                     .from('escribanos')
-                    .insert(config.escribanos.map(e => ({
+                    .insert(rowsWithOrden);
+
+                if (insEscr && /orden/i.test(insEscr.message || '')) {
+                    const rowsWithoutOrden = config.escribanos.map(e => ({
                         id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
                         nombre: e.nombre
-                    })));
+                    }));
+                    ({ error: insEscr } = await supabaseClient.from('escribanos').insert(rowsWithoutOrden));
+                }
+
                 if (insEscr) throw insEscr;
             }
         }
@@ -1938,6 +2009,78 @@
         // ---- 3.c  MIGRACIÓN DESDE localStorage (una sola vez) ----
 
         const MIGRATION_FLAG = 'supabase_migration_done_v2';
+        const URGENTE_DIAS_MIGRATION_FLAG = 'config_urgente_en_dias_v1';
+        const ESCRIBANOS_ORDEN_MIGRATION_FLAG = 'escribanos_orden_v1';
+
+        function convertirUrgenteHorasADias(horas) {
+            const h = parseInt(horas) || 48;
+            return Math.max(1, Math.ceil(h / 24));
+        }
+
+        async function aplicarMigracionUrgenteADias(config) {
+            if (localStorage.getItem(URGENTE_DIAS_MIGRATION_FLAG) === 'true') {
+                return config;
+            }
+
+            if (!config.tiposTramite || config.tiposTramite.length === 0) {
+                localStorage.setItem(URGENTE_DIAS_MIGRATION_FLAG, 'true');
+                return config;
+            }
+
+            let changed = false;
+            config.tiposTramite = config.tiposTramite.map(t => {
+                const dias = convertirUrgenteHorasADias(t.urgente);
+                if (dias !== t.urgente) changed = true;
+                return { ...t, urgente: dias };
+            });
+
+            localStorage.setItem(URGENTE_DIAS_MIGRATION_FLAG, 'true');
+
+            if (changed) {
+                configCache = config;
+                persistConfigCache(config);
+                if (isAppOnline()) {
+                    try {
+                        await saveConfigSupabaseRemote(config);
+                        showToast('Tiempos urgentes convertidos de horas a días.', 'info');
+                    } catch (e) {
+                        console.error('Error al guardar migración urgente:', e);
+                        enqueueSync({ type: 'save_config', payload: config });
+                    }
+                }
+            }
+
+            return config;
+        }
+
+        async function aplicarMigracionEscribanosOrden(config) {
+            if (!config.escribanos || config.escribanos.length === 0) {
+                localStorage.setItem(ESCRIBANOS_ORDEN_MIGRATION_FLAG, 'true');
+                return config;
+            }
+
+            const yaMigrado = localStorage.getItem(ESCRIBANOS_ORDEN_MIGRATION_FLAG) === 'true';
+            const normalizados = normalizarOrdenEscribanos(config.escribanos);
+            const necesitaGuardar = !yaMigrado || normalizados.some((e, i) => e.orden !== config.escribanos[i]?.orden);
+
+            config.escribanos = normalizados;
+            localStorage.setItem(ESCRIBANOS_ORDEN_MIGRATION_FLAG, 'true');
+
+            if (necesitaGuardar) {
+                configCache = config;
+                persistConfigCache(config);
+                if (isAppOnline()) {
+                    try {
+                        await saveConfigSupabaseRemote(config);
+                    } catch (e) {
+                        console.error('Error al guardar migración de orden de solicitantes:', e);
+                        enqueueSync({ type: 'save_config', payload: config });
+                    }
+                }
+            }
+
+            return config;
+        }
 
         async function migrarDesdeLocalStorage() {
             // Verificar si ya se migró
@@ -2018,9 +2161,10 @@
 
                     // Escribanos
                     if (localConfig.escribanos.length > 0) {
-                        const escrRows = localConfig.escribanos.map(e => ({
+                        const escrRows = localConfig.escribanos.map((e, index) => ({
                             id: e.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
-                            nombre: e.nombre
+                            nombre: e.nombre,
+                            orden: Number.isFinite(e.orden) ? e.orden : index
                         }));
                         const { error: eErr } = await supabaseClient.from('escribanos').insert(escrRows);
                         if (eErr) throw eErr;
@@ -2090,6 +2234,7 @@
         // saveConfig() asíncrono
         async function saveConfig(config, options = {}) {
             const { silent = false } = options;
+            config.escribanos = normalizarOrdenEscribanos(config.escribanos || []);
             configCache = config;
             persistConfigCache(config);
 
@@ -2150,6 +2295,9 @@
             } else {
                 showToast('Modo sin conexión. Mostrando datos guardados localmente.', 'warning');
             }
+
+            configCache = await aplicarMigracionUrgenteADias(configCache);
+            configCache = await aplicarMigracionEscribanosOrden(configCache);
 
             updatePendingSyncBadge();
         }
@@ -2585,9 +2733,14 @@
                 [...new Set(tramites.map(t => t.tramite))].sort().map(t => `<option value="${t}">${t}</option>`).join('');
 
             const filterEscribano = document.getElementById('filterEscribano');
+            const escribanosConfig = getEscribanosOrdenados().map(e => e.nombre);
+            const escribanosEnUso = [...new Set(tramites.map(t => t.para).filter(Boolean))];
+            const escribanosFiltro = [
+                ...escribanosConfig.filter(n => escribanosEnUso.includes(n)),
+                ...escribanosEnUso.filter(n => !escribanosConfig.includes(n)).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+            ];
             filterEscribano.innerHTML = '<option value="">Todos los escribanos</option>' +
-                [...new Set(tramites.map(t => t.para).filter(Boolean))].sort().map(e => `<option value="${e}">${e}</option>`)
-                .join('');
+                escribanosFiltro.map(e => `<option value="${e}">${e}</option>`).join('');
         }
 
         // 5.8 Detalle
@@ -2733,10 +2886,34 @@
         }
 
         function cargarEscribanos() {
-            const config = getConfig();
             const paraSelect = document.getElementById('tramitePara');
             paraSelect.innerHTML = '<option value="">Seleccionar...</option>' +
-                config.escribanos.map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+                getEscribanosOrdenados().map(e => `<option value="${e.nombre}">${e.nombre}</option>`).join('');
+        }
+
+        function esFinDeSemana(fecha) {
+            const dia = fecha.getDay();
+            return dia === 0 || dia === 6;
+        }
+
+        function sumarDiasHabiles(fecha, dias) {
+            const resultado = new Date(fecha);
+            let restantes = dias;
+            while (restantes > 0) {
+                resultado.setDate(resultado.getDate() + 1);
+                if (!esFinDeSemana(resultado)) {
+                    restantes--;
+                }
+            }
+            return resultado;
+        }
+
+        function ajustarAHabil(fecha) {
+            const resultado = new Date(fecha);
+            while (esFinDeSemana(resultado)) {
+                resultado.setDate(resultado.getDate() + 1);
+            }
+            return resultado;
         }
 
         function calcularSalida() {
@@ -2751,13 +2928,17 @@
             if (!tipoTramite) return;
 
             const fechaBase = new Date(fechaInput + 'T00:00:00');
+            let fechaSalida;
+
             if (urgencia === 'Urgente') {
-                fechaBase.setHours(fechaBase.getHours() + parseInt(tipoTramite.urgente) || 48);
+                const dias = parseInt(tipoTramite.urgente) || 2;
+                fechaSalida = sumarDiasHabiles(fechaBase, dias);
             } else {
-                fechaBase.setDate(fechaBase.getDate() + parseInt(tipoTramite.comun) || 15);
+                const dias = parseInt(tipoTramite.comun) || 15;
+                fechaSalida = sumarDiasHabiles(fechaBase, dias);
             }
 
-            document.getElementById('tramiteSalida').value = fechaBase.toISOString().split('T')[0];
+            document.getElementById('tramiteSalida').value = fechaSalida.toISOString().split('T')[0];
         }
 
         async function saveTramite(event) {
@@ -3021,7 +3202,7 @@
                                 <div class="item-info">
                                     <strong>${t.nombre}</strong>
                                     ${t.formulario ? `<span style="color:var(--text-secondary);"> (Form. ${t.formulario})</span>` : ''}
-                                    <br><small>Común: ${t.comun} días | Urgente: ${t.urgente} horas</small>
+                                    <br><small>Común: ${t.comun} días | Urgente: ${t.urgente} días</small>
                                     <br><span class="badge-modulo ${t.catastral ? 'catastro' : 'rpi'}">${t.catastral ? 'Catastro' : 'RPI'}</span>
                                 </div>
                                 <div class="item-actions">
@@ -3033,11 +3214,13 @@
             }
 
             const escribanosList = document.getElementById('escribanosList');
-            if (config.escribanos.length === 0) {
+            const escribanosOrdenados = getEscribanosOrdenados(config);
+            if (escribanosOrdenados.length === 0) {
                 escribanosList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay escribanos configurados.</li>';
             } else {
-                escribanosList.innerHTML = config.escribanos.map((e, i) => `
-                            <li>
+                escribanosList.innerHTML = escribanosOrdenados.map((e, i) => `
+                            <li class="escribano-item" draggable="true" data-index="${i}">
+                                <span class="drag-handle" title="Arrastrar para reordenar"><i class="fas fa-grip-vertical"></i></span>
                                 <div class="item-info"><strong>${e.nombre}</strong></div>
                                 <div class="item-actions">
                                     <button class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
@@ -3045,6 +3228,71 @@
                                 </div>
                             </li>
                         `).join('');
+                setupEscribanosDragDrop();
+            }
+        }
+
+        function setupEscribanosDragDrop() {
+            const list = document.getElementById('escribanosList');
+            if (!list) return;
+
+            let draggedIndex = null;
+
+            list.querySelectorAll('li.escribano-item').forEach(li => {
+                li.addEventListener('dragstart', (e) => {
+                    if (!e.target.closest('.drag-handle')) {
+                        e.preventDefault();
+                        return;
+                    }
+                    draggedIndex = parseInt(li.dataset.index, 10);
+                    li.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(draggedIndex));
+                });
+
+                li.addEventListener('dragend', () => {
+                    li.classList.remove('dragging');
+                    list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
+                    draggedIndex = null;
+                });
+
+                li.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
+                    li.classList.add('drag-over');
+                });
+
+                li.addEventListener('dragleave', () => {
+                    li.classList.remove('drag-over');
+                });
+
+                li.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    li.classList.remove('drag-over');
+                    const fromIndex = draggedIndex ?? parseInt(e.dataTransfer.getData('text/plain'), 10);
+                    const toIndex = parseInt(li.dataset.index, 10);
+                    if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex) || fromIndex === toIndex) return;
+                    await reorderEscribanos(fromIndex, toIndex);
+                });
+            });
+        }
+
+        async function reorderEscribanos(fromIndex, toIndex) {
+            try {
+                const config = getConfig();
+                const items = [...getEscribanosOrdenados(config)];
+                const [moved] = items.splice(fromIndex, 1);
+                items.splice(toIndex, 0, moved);
+                config.escribanos = normalizarOrdenEscribanos(items);
+
+                await saveConfig(config, { silent: true });
+                renderConfig();
+                cargarEscribanos();
+                updateFilterOptions();
+                showToast('Orden de solicitantes actualizado.', 'success');
+            } catch (error) {
+                showToast('Error al reordenar los solicitantes.', 'error');
             }
         }
 
@@ -3086,7 +3334,7 @@
                 nombre: document.getElementById('tipoTramiteNombre').value.trim(),
                 formulario: document.getElementById('tipoTramiteFormulario').value.trim(),
                 comun: parseInt(document.getElementById('tipoTramiteComun').value) || 15,
-                urgente: parseInt(document.getElementById('tipoTramiteUrgente').value) || 48,
+                urgente: parseInt(document.getElementById('tipoTramiteUrgente').value) || 2,
                 catastral: document.getElementById('tipoTramiteCatastral').checked
             };
 
@@ -3143,7 +3391,7 @@
             if (index !== null && index >= 0) {
                 title.textContent = 'Editar Escribano';
                 const config = getConfig();
-                const escribano = config.escribanos[index];
+                const escribano = getEscribanosOrdenados(config)[index];
                 if (escribano) {
                     document.getElementById('escribanoId').value = index;
                     document.getElementById('escribanoNombre').value = escribano.nombre;
@@ -3171,24 +3419,34 @@
 
             try {
                 const config = getConfig();
-                const duplicate = config.escribanos.find((e, i) => e.nombre.toLowerCase() === nombre.toLowerCase() && i !== parseInt(
+                const escribanosOrdenados = getEscribanosOrdenados(config);
+                const duplicate = escribanosOrdenados.find((e, i) => e.nombre.toLowerCase() === nombre.toLowerCase() && i !== parseInt(
                     index));
                 if (duplicate) {
                     showToast('Ya existe un escribano con ese nombre.', 'warning');
                     return;
                 }
 
-                const escribano = { nombre };
+                let escribano;
+                if (index !== '' && index >= 0) {
+                    escribano = { ...escribanosOrdenados[index], nombre };
+                } else {
+                    escribano = { nombre, orden: escribanosOrdenados.length };
+                }
 
                 if (index !== '' && index >= 0) {
-                    config.escribanos[index] = escribano;
+                    escribanosOrdenados[index] = escribano;
                 } else {
-                    config.escribanos.push(escribano);
+                    escribanosOrdenados.push(escribano);
                 }
+
+                config.escribanos = normalizarOrdenEscribanos(escribanosOrdenados);
 
                 await saveConfig(config);
                 closeEscribanoModal();
                 renderConfig();
+                cargarEscribanos();
+                updateFilterOptions();
                 showToast('Escribano guardado correctamente.', 'success');
             } catch (error) {
                 showToast('Error al guardar el escribano.', 'error');
@@ -3199,9 +3457,13 @@
             if (!confirm('¿Eliminar este escribano?')) return;
             try {
                 const config = getConfig();
-                config.escribanos.splice(index, 1);
+                const escribanosOrdenados = getEscribanosOrdenados(config);
+                escribanosOrdenados.splice(index, 1);
+                config.escribanos = normalizarOrdenEscribanos(escribanosOrdenados);
                 await saveConfig(config);
                 renderConfig();
+                cargarEscribanos();
+                updateFilterOptions();
                 showToast('Escribano eliminado.', 'success');
             } catch (error) {
                 showToast('Error al eliminar el escribano.', 'error');
@@ -3348,7 +3610,7 @@
             const data = {
                 tramites: getData(),
                 config: getConfig(),
-                version: '2.0',
+                version: '3.0',
                 fecha: new Date().toISOString()
             };
 
