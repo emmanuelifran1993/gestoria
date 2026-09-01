@@ -1162,7 +1162,7 @@
             <i class="fas fa-moon"></i>
             <span>Modo Oscuro</span>
         </div>
-        <div class="sidebar-footer">Gestión de Trámites v2.0</div>
+        <div class="sidebar-footer">Gestión de Trámites versión 4.0</div>
     </nav>
 
     <!-- ====== MAIN ====== -->
@@ -2012,9 +2012,12 @@
         const URGENTE_DIAS_MIGRATION_FLAG = 'config_urgente_en_dias_v1';
         const ESCRIBANOS_ORDEN_MIGRATION_FLAG = 'escribanos_orden_v1';
 
-        function convertirUrgenteHorasADias(horas) {
-            const h = parseInt(horas) || 48;
-            return Math.max(1, Math.ceil(h / 24));
+        function convertirUrgenteHorasADias(valor) {
+            const v = parseInt(valor);
+            if (!Number.isFinite(v) || v < 1) return 2;
+            // Solo valores >= 24 eran horas en el sistema anterior; el resto ya está en días
+            if (v >= 24) return Math.max(1, Math.ceil(v / 24));
+            return v;
         }
 
         async function aplicarMigracionUrgenteADias(config) {
@@ -2152,7 +2155,7 @@
                             nombre: t.nombre,
                             formulario: t.formulario || '',
                             comun: t.comun || 15,
-                            urgente: t.urgente || 48,
+                            urgente: convertirUrgenteHorasADias(t.urgente || 48),
                             catastral: t.catastral || false
                         }));
                         const { error: tErr } = await supabaseClient.from('tipos_tramite').insert(tiposRows);
@@ -3610,7 +3613,7 @@
             const data = {
                 tramites: getData(),
                 config: getConfig(),
-                version: '3.0',
+                version: '4.0',
                 fecha: new Date().toISOString()
             };
 
