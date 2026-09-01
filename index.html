@@ -876,25 +876,43 @@
         }
         .config-list li.escribano-item {
             cursor: default;
+            user-select: none;
+            touch-action: none;
         }
         .config-list li.escribano-item.dragging {
-            opacity: 0.5;
+            opacity: 0.55;
+            background: var(--hover-row);
         }
         .config-list li.escribano-item.drag-over {
             background: var(--hover-row);
-            border-top: 2px solid var(--accent);
+            box-shadow: inset 0 2px 0 var(--accent);
         }
         .config-list .drag-handle {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 28px;
+            width: 32px;
+            min-height: 32px;
             color: var(--text-secondary);
             cursor: grab;
             flex-shrink: 0;
+            touch-action: none;
         }
-        .config-list .drag-handle:active {
+        .config-list .drag-handle:hover {
+            color: var(--accent);
+        }
+        .config-list .drag-handle:active,
+        .config-list .drag-handle.is-dragging {
             cursor: grabbing;
+            color: var(--accent);
+        }
+        .config-list .order-buttons {
+            display: flex;
+            gap: 4px;
+        }
+        .config-list .order-buttons .btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
         }
         .config-list .config-hint {
             color: var(--text-secondary);
@@ -1309,7 +1327,7 @@
             </div>
             <div class="config-section">
                 <h3><i class="fas fa-user-tie"></i> Solicitante</h3>
-                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Arrastrá los solicitantes para cambiar el orden en la lista "Para".</p>
+                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden en la lista "Para".</p>
                 <ul class="config-list" id="escribanosList"></ul>
                 <button class="btn btn-primary" onclick="openEscribanoModal()" style="margin-top:12px;">
                     <i class="fas fa-plus"></i> Agregar Escribano
@@ -3194,6 +3212,7 @@
 
         // 5.13 Configuración
         function renderConfig() {
+            initEscribanosSortable();
             const config = getConfig();
 
             const tiposList = document.getElementById('tiposTramiteList');
@@ -3221,64 +3240,132 @@
             if (escribanosOrdenados.length === 0) {
                 escribanosList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay escribanos configurados.</li>';
             } else {
+                const lastIndex = escribanosOrdenados.length - 1;
                 escribanosList.innerHTML = escribanosOrdenados.map((e, i) => `
-                            <li class="escribano-item" draggable="true" data-index="${i}">
+                            <li class="escribano-item" data-index="${i}">
                                 <span class="drag-handle" title="Arrastrar para reordenar"><i class="fas fa-grip-vertical"></i></span>
                                 <div class="item-info"><strong>${e.nombre}</strong></div>
                                 <div class="item-actions">
-                                    <button class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteEscribano(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                    <div class="order-buttons">
+                                        <button type="button" class="btn btn-sm btn-icon" onclick="moveEscribano(${i}, -1)" title="Subir" ${i === 0 ? 'disabled' : ''}><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="btn btn-sm btn-icon" onclick="moveEscribano(${i}, 1)" title="Bajar" ${i === lastIndex ? 'disabled' : ''}><i class="fas fa-chevron-down"></i></button>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-icon" onclick="openEscribanoModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button type="button" class="btn btn-sm btn-icon btn-danger" onclick="deleteEscribano(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
                                 </div>
                             </li>
                         `).join('');
-                setupEscribanosDragDrop();
             }
         }
 
-        function setupEscribanosDragDrop() {
+        let escribanosSortDrag = null;
+
+        function initEscribanosSortable() {
             const list = document.getElementById('escribanosList');
-            if (!list) return;
+            if (!list || list.dataset.sortReady === 'true') return;
+            list.dataset.sortReady = 'true';
 
-            let draggedIndex = null;
+            const getItemAtY = (clientY) => {
+                const items = [...list.querySelectorAll('li.escribano-item')];
+                return items.find(item => {
+                    const rect = item.getBoundingClientRect();
+                    return clientY >= rect.top && clientY <= rect.bottom;
+                }) || null;
+            };
 
-            list.querySelectorAll('li.escribano-item').forEach(li => {
-                li.addEventListener('dragstart', (e) => {
-                    if (!e.target.closest('.drag-handle')) {
-                        e.preventDefault();
-                        return;
-                    }
-                    draggedIndex = parseInt(li.dataset.index, 10);
-                    li.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/plain', String(draggedIndex));
-                });
+            const finishDrag = async (clientY) => {
+                if (!escribanosSortDrag) return;
 
-                li.addEventListener('dragend', () => {
-                    li.classList.remove('dragging');
-                    list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
-                    draggedIndex = null;
-                });
+                const { li, fromIndex, handle } = escribanosSortDrag;
+                li.classList.remove('dragging');
+                handle.classList.remove('is-dragging');
+                list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
+                escribanosSortDrag = null;
 
-                li.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
-                    li.classList.add('drag-over');
-                });
+                const target = getItemAtY(clientY);
+                if (!target) return;
 
-                li.addEventListener('dragleave', () => {
-                    li.classList.remove('drag-over');
-                });
+                let toIndex = parseInt(target.dataset.index, 10);
+                if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex) || fromIndex === toIndex) return;
 
-                li.addEventListener('drop', async (e) => {
-                    e.preventDefault();
-                    li.classList.remove('drag-over');
-                    const fromIndex = draggedIndex ?? parseInt(e.dataTransfer.getData('text/plain'), 10);
-                    const toIndex = parseInt(li.dataset.index, 10);
-                    if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex) || fromIndex === toIndex) return;
+                const rect = target.getBoundingClientRect();
+                const dropAfter = clientY > rect.top + rect.height / 2;
+                if (dropAfter && toIndex < fromIndex) toIndex += 1;
+                if (!dropAfter && toIndex > fromIndex) toIndex -= 1;
+
+                if (toIndex !== fromIndex) {
                     await reorderEscribanos(fromIndex, toIndex);
-                });
+                }
+            };
+
+            const startDrag = (clientY, handle) => {
+                const li = handle.closest('li.escribano-item');
+                if (!li) return;
+
+                escribanosSortDrag = {
+                    li,
+                    handle,
+                    fromIndex: parseInt(li.dataset.index, 10),
+                    startY: clientY
+                };
+
+                li.classList.add('dragging');
+                handle.classList.add('is-dragging');
+            };
+
+            const moveDrag = (clientY) => {
+                if (!escribanosSortDrag) return;
+
+                list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
+                const over = getItemAtY(clientY);
+                if (over && over !== escribanosSortDrag.li) {
+                    over.classList.add('drag-over');
+                }
+            };
+
+            list.addEventListener('mousedown', (e) => {
+                const handle = e.target.closest('.drag-handle');
+                if (!handle || !list.contains(handle)) return;
+                e.preventDefault();
+                startDrag(e.clientY, handle);
             });
+
+            list.addEventListener('touchstart', (e) => {
+                const handle = e.target.closest('.drag-handle');
+                if (!handle || !list.contains(handle)) return;
+                e.preventDefault();
+                startDrag(e.touches[0].clientY, handle);
+            }, { passive: false });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!escribanosSortDrag) return;
+                e.preventDefault();
+                moveDrag(e.clientY);
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (!escribanosSortDrag) return;
+                e.preventDefault();
+                moveDrag(e.touches[0].clientY);
+            }, { passive: false });
+
+            document.addEventListener('mouseup', (e) => {
+                if (!escribanosSortDrag) return;
+                finishDrag(e.clientY);
+            });
+
+            document.addEventListener('touchend', (e) => {
+                if (!escribanosSortDrag) return;
+                const touch = e.changedTouches[0];
+                finishDrag(touch ? touch.clientY : escribanosSortDrag.startY);
+            });
+        }
+
+        async function moveEscribano(index, direction) {
+            const toIndex = index + direction;
+            const total = getEscribanosOrdenados().length;
+            if (toIndex < 0 || toIndex >= total) return;
+            await reorderEscribanos(index, toIndex);
         }
 
         async function reorderEscribanos(fromIndex, toIndex) {
