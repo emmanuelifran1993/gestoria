@@ -242,6 +242,66 @@
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 16px;
             margin-bottom: 24px;
+            overflow: visible;
+        }
+        .stat-total-wrap {
+            position: relative;
+            z-index: 5;
+        }
+        .stat-total-wrap.menu-open {
+            z-index: 40;
+        }
+        .stat-total-wrap.menu-open .stat-card:hover {
+            transform: none;
+        }
+        .stat-total-caret {
+            font-size: 0.7rem;
+            margin-left: 4px;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .stat-total-caret.open {
+            transform: rotate(180deg);
+        }
+        .stat-month-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+            overflow: hidden;
+            z-index: 41;
+        }
+        .stat-month-menu.open {
+            display: block;
+        }
+        .stat-month-menu button {
+            display: block;
+            width: 100%;
+            padding: 11px 14px;
+            border: none;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            color: var(--text-primary);
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+        .stat-month-menu button:hover {
+            background: var(--hover-row);
+        }
+        .stat-month-menu button.active {
+            background: #eef3f7;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .dark-mode .stat-month-menu button.active {
+            background: #243038;
         }
         .stat-card {
             background: var(--card-bg);
@@ -251,12 +311,54 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
+            border: 2px solid var(--border);
+            width: 100%;
+            font: inherit;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
         }
         .stat-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        }
+        .stat-card:focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 2px;
+        }
+        .stat-card.active {
+            box-shadow: 0 4px 16px rgba(91, 127, 149, 0.22);
+        }
+        .stat-card[data-filter="total"].active {
+            border-color: #5b7f95;
+            background: #eef3f7;
+        }
+        .stat-card[data-filter="por-salir"].active {
+            border-color: #f39c12;
+            background: #fff8e1;
+        }
+        .stat-card[data-filter="para-retirar"].active {
+            border-color: #e74c3c;
+            background: #fde8e8;
+        }
+        .stat-card[data-filter="pendiente"].active {
+            border-color: #27ae60;
+            background: #e8f5e9;
+        }
+        .dark-mode .stat-card[data-filter="total"].active {
+            background: #243038;
+        }
+        .dark-mode .stat-card[data-filter="por-salir"].active {
+            background: #3a3218;
+        }
+        .dark-mode .stat-card[data-filter="para-retirar"].active {
+            background: #3d2020;
+        }
+        .dark-mode .stat-card[data-filter="pendiente"].active {
+            background: #1e3324;
         }
         .stat-icon {
             width: 50px;
@@ -1100,6 +1202,7 @@
                 flex-direction: column;
                 text-align: center;
                 gap: 8px;
+                justify-content: center;
             }
             .btn {
                 padding: 8px 12px;
@@ -1219,22 +1322,25 @@
                 </div>
 
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
-                        <div class="stat-info"><h3>Total Trámites</h3><p id="statTotal">0</p></div>
+                    <div class="stat-total-wrap" id="statTotalWrap">
+                        <button type="button" class="stat-card active" data-filter="total" id="statTotalBtn" onclick="filtrarDashboard('total', event)" aria-pressed="true" aria-haspopup="true" aria-expanded="false">
+                            <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
+                            <div class="stat-info"><h3>Total <i class="fas fa-chevron-down stat-total-caret" id="statTotalCaret"></i></h3><p id="statTotal">0</p></div>
+                        </button>
+                        <div class="stat-month-menu" id="statTotalMenu" role="menu"></div>
                     </div>
-                    <div class="stat-card">
+                    <button type="button" class="stat-card" data-filter="por-salir" onclick="filtrarDashboard('por-salir')" aria-pressed="false">
                         <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
-                        <div class="stat-info"><h3>Pendientes</h3><p id="statPendientes">0</p></div>
-                    </div>
-                    <div class="stat-card">
+                        <div class="stat-info"><h3>Por Salir</h3><p id="statPorSalir">0</p></div>
+                    </button>
+                    <button type="button" class="stat-card" data-filter="para-retirar" onclick="filtrarDashboard('para-retirar')" aria-pressed="false">
                         <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
-                        <div class="stat-info"><h3>Urgentes</h3><p id="statUrgentes">0</p></div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-                        <div class="stat-info"><h3>Al Día</h3><p id="statAlDia">0</p></div>
-                    </div>
+                        <div class="stat-info"><h3>Para Retirar</h3><p id="statParaRetirar">0</p></div>
+                    </button>
+                    <button type="button" class="stat-card" data-filter="pendiente" onclick="filtrarDashboard('pendiente')" aria-pressed="false">
+                        <div class="stat-icon green"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="stat-info"><h3>Pendiente</h3><p id="statPendiente">0</p></div>
+                    </button>
                 </div>
 
                 <div class="config-section">
@@ -2359,6 +2465,9 @@
         let moduloFiltro = 'rpi';
         let tramiteExpandido = null;
         let vencimientoExpandido = null;
+        let filtroDashboard = 'total';
+        let filtroMesDashboard = '';
+        const MESES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         function navigateTo(page) {
             currentPage = page;
@@ -2403,11 +2512,15 @@
                 }
             }
             if (page === 'tramites') {
+                cerrarMenuTotal();
                 renderTable();
                 updateFilterOptions();
                 actualizarSelectorTramite();
             }
-            if (page === 'config') renderConfig();
+            if (page === 'config') {
+                cerrarMenuTotal();
+                renderConfig();
+            }
         }
 
         // 5.2 Selección de módulo
@@ -2417,12 +2530,18 @@
             document.getElementById('moduleDashboard').style.display = 'block';
             document.getElementById('moduleTitle').textContent = modulo.toUpperCase();
             document.getElementById('vencimientoSearchInput').value = '';
+            filtroDashboard = 'total';
+            filtroMesDashboard = '';
+            cerrarMenuTotal();
             updateStats();
             showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
         }
 
         function volverSelector() {
             moduloActual = null;
+            filtroDashboard = 'total';
+            filtroMesDashboard = '';
+            cerrarMenuTotal();
             document.getElementById('moduleSelector').style.display = 'block';
             document.getElementById('moduleDashboard').style.display = 'none';
         }
@@ -2488,27 +2607,137 @@
         }
 
         // 5.5 Estadísticas
+        function coincideFiltroDashboard(tramite, filtro) {
+            if (!filtro || filtro === 'total') return true;
+            const estado = getEstadoBadge(tramite).text;
+            if (filtro === 'por-salir') return estado === 'Por Salir';
+            if (filtro === 'para-retirar') return estado === 'Para retirar';
+            if (filtro === 'pendiente') return estado === 'Pendiente';
+            return true;
+        }
+
+        function actualizarTarjetasFiltro() {
+            document.querySelectorAll('.stats-grid .stat-card').forEach(card => {
+                const activo = card.dataset.filter === filtroDashboard;
+                card.classList.toggle('active', activo);
+                card.setAttribute('aria-pressed', activo ? 'true' : 'false');
+            });
+        }
+
+        function obtenerUltimosMeses(cantidad = 3) {
+            const meses = [];
+            const now = new Date();
+            const anioActual = now.getFullYear();
+            for (let i = 0; i < cantidad; i++) {
+                const d = new Date(anioActual, now.getMonth() - i, 1);
+                const label = d.getFullYear() === anioActual
+                    ? MESES_ES[d.getMonth()]
+                    : `${MESES_ES[d.getMonth()]} ${d.getFullYear()}`;
+                meses.push({
+                    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                    label
+                });
+            }
+            return meses;
+        }
+
+        function tramiteEnMes(tramite, mesKey) {
+            if (!mesKey) return true;
+            if (!tramite.fecha) return false;
+            const fecha = new Date(tramite.fecha + 'T00:00:00');
+            if (isNaN(fecha)) return false;
+            const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+            return key === mesKey;
+        }
+
+        function etiquetaMesSeleccionado() {
+            if (!filtroMesDashboard) return '';
+            return obtenerUltimosMeses(3).find(m => m.key === filtroMesDashboard)?.label || '';
+        }
+
+        function renderMenuTotal() {
+            const menu = document.getElementById('statTotalMenu');
+            if (!menu) return;
+            const items = [{ key: '', label: 'Todos' }, ...obtenerUltimosMeses(3)];
+            menu.innerHTML = items.map(item => {
+                const activo = (filtroMesDashboard || '') === item.key;
+                return `<button type="button" role="menuitem" class="${activo ? 'active' : ''}" onclick="seleccionarMesDashboard('${item.key}', event)">${item.label}</button>`;
+            }).join('');
+        }
+
+        function abrirMenuTotal() {
+            renderMenuTotal();
+            const menu = document.getElementById('statTotalMenu');
+            const btn = document.getElementById('statTotalBtn');
+            const wrap = document.getElementById('statTotalWrap');
+            const caret = document.getElementById('statTotalCaret');
+            menu?.classList.add('open');
+            wrap?.classList.add('menu-open');
+            btn?.setAttribute('aria-expanded', 'true');
+            caret?.classList.add('open');
+        }
+
+        function cerrarMenuTotal() {
+            const menu = document.getElementById('statTotalMenu');
+            const btn = document.getElementById('statTotalBtn');
+            const wrap = document.getElementById('statTotalWrap');
+            const caret = document.getElementById('statTotalCaret');
+            menu?.classList.remove('open');
+            wrap?.classList.remove('menu-open');
+            btn?.setAttribute('aria-expanded', 'false');
+            caret?.classList.remove('open');
+        }
+
+        function toggleMenuTotal() {
+            const menu = document.getElementById('statTotalMenu');
+            if (menu?.classList.contains('open')) {
+                cerrarMenuTotal();
+            } else {
+                abrirMenuTotal();
+            }
+        }
+
+        function seleccionarMesDashboard(mesKey, event) {
+            if (event) event.stopPropagation();
+            filtroMesDashboard = mesKey || '';
+            filtroDashboard = 'total';
+            cerrarMenuTotal();
+            actualizarTarjetasFiltro();
+            renderVencimientos();
+        }
+
+        function filtrarDashboard(filtro, event) {
+            if (event) event.stopPropagation();
+            if (filtro === 'total') {
+                filtroDashboard = 'total';
+                actualizarTarjetasFiltro();
+                renderVencimientos();
+                toggleMenuTotal();
+                return;
+            }
+            cerrarMenuTotal();
+            filtroDashboard = filtro || 'total';
+            actualizarTarjetasFiltro();
+            renderVencimientos();
+        }
+
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('statTotalWrap');
+            if (wrap && !wrap.contains(e.target)) cerrarMenuTotal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cerrarMenuTotal();
+        });
+
         function updateStats() {
             const tramites = getData().filter(t => t.modulo === moduloActual);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
 
             document.getElementById('statTotal').textContent = tramites.length;
+            document.getElementById('statPorSalir').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'por-salir')).length;
+            document.getElementById('statParaRetirar').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'para-retirar')).length;
+            document.getElementById('statPendiente').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'pendiente')).length;
 
-            const urgentes = tramites.filter(t => t.urgencia === 'Urgente' && !t.retirado);
-            document.getElementById('statUrgentes').textContent = urgentes.length;
-
-            const pendientes = tramites.filter(t => !t.retirado);
-            document.getElementById('statPendientes').textContent = pendientes.length;
-
-            const alDia = tramites.filter(t => {
-                if (t.retirado) return false;
-                if (!t.salida) return false;
-                const diff = Math.ceil((new Date(t.salida) - today) / (1000 * 60 * 60 * 24));
-                return diff > 3;
-            });
-            document.getElementById('statAlDia').textContent = alDia.length;
-
+            actualizarTarjetasFiltro();
             renderVencimientos();
         }
 
@@ -2525,7 +2754,10 @@
 
             const searchTerm = document.getElementById('vencimientoSearchInput')?.value?.toLowerCase() || '';
 
-            let tramitesFiltrados = tramitesOrdenados;
+            let tramitesFiltrados = tramitesOrdenados.filter(t => coincideFiltroDashboard(t, filtroDashboard));
+            if (filtroDashboard === 'total') {
+                tramitesFiltrados = tramitesFiltrados.filter(t => tramiteEnMes(t, filtroMesDashboard));
+            }
             if (searchTerm) {
                 tramitesFiltrados = tramitesFiltrados.filter(t =>
                     (t.nombreCliente && t.nombreCliente.toLowerCase().includes(searchTerm)) ||
@@ -2537,7 +2769,17 @@
             const vencimientosList = document.getElementById('vencimientosList');
 
             if (tramitesFiltrados.length === 0) {
-                vencimientosList.innerHTML = '<p style="color: var(--text-secondary);">No hay trámites registrados.</p>';
+                const mesLabel = etiquetaMesSeleccionado();
+                const mensajesVacios = {
+                    total: mesLabel ? `No hay trámites en ${mesLabel}.` : 'No hay trámites registrados.',
+                    'por-salir': 'No hay trámites por salir.',
+                    'para-retirar': 'No hay trámites para retirar.',
+                    pendiente: 'No hay trámites pendientes.'
+                };
+                const mensaje = searchTerm
+                    ? 'No se encontraron trámites con esa búsqueda.'
+                    : (mensajesVacios[filtroDashboard] || mensajesVacios.total);
+                vencimientosList.innerHTML = `<p style="color: var(--text-secondary);">${mensaje}</p>`;
                 return;
             }
 
