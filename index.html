@@ -590,6 +590,26 @@
             font-size: 0.8rem;
             border-radius: 8px;
         }
+        .btn-switch-modulo.btn-rpi {
+            background: var(--rpi-color);
+            color: #fff;
+            border-color: var(--rpi-color);
+        }
+        .btn-switch-modulo.btn-rpi:hover {
+            background: #4a6a7c;
+            border-color: #4a6a7c;
+            color: #fff;
+        }
+        .btn-switch-modulo.btn-catastro {
+            background: var(--catastro-color);
+            color: #fff;
+            border-color: var(--catastro-color);
+        }
+        .btn-switch-modulo.btn-catastro:hover {
+            background: #7d3c98;
+            border-color: #7d3c98;
+            color: #fff;
+        }
         .btn-icon {
             width: 36px;
             height: 36px;
@@ -1316,8 +1336,8 @@
             <div id="moduleDashboard" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
                     <h2 id="moduleTitle" style="font-size:1.5rem;">RPI</h2>
-                    <button class="btn" onclick="volverSelector()">
-                        <i class="fas fa-arrow-left"></i> Cambiar módulo
+                    <button class="btn btn-switch-modulo btn-catastro" id="btnCambiarModulo" onclick="cambiarAOtroModulo()">
+                        <i class="fas fa-map"></i> Cambiar a Catastro
                     </button>
                 </div>
 
@@ -2501,15 +2521,7 @@
             }
 
             if (page === 'home') {
-                if (moduloActual) {
-                    document.getElementById('moduleSelector').style.display = 'none';
-                    document.getElementById('moduleDashboard').style.display = 'block';
-                    document.getElementById('moduleTitle').textContent = moduloActual.toUpperCase();
-                    updateStats();
-                } else {
-                    document.getElementById('moduleSelector').style.display = 'block';
-                    document.getElementById('moduleDashboard').style.display = 'none';
-                }
+                volverSelector();
             }
             if (page === 'tramites') {
                 cerrarMenuTotal();
@@ -2533,8 +2545,24 @@
             filtroDashboard = 'total';
             filtroMesDashboard = '';
             cerrarMenuTotal();
+            actualizarBotonCambioModulo();
             updateStats();
             showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
+        }
+
+        function actualizarBotonCambioModulo() {
+            const btn = document.getElementById('btnCambiarModulo');
+            if (!btn || !moduloActual) return;
+            const destino = moduloActual === 'rpi' ? 'catastro' : 'rpi';
+            const nombreDestino = destino === 'rpi' ? 'RPI' : 'Catastro';
+            const icono = destino === 'rpi' ? 'fa-building' : 'fa-map';
+            btn.className = `btn btn-switch-modulo btn-${destino}`;
+            btn.innerHTML = `<i class="fas ${icono}"></i> Cambiar a ${nombreDestino}`;
+        }
+
+        function cambiarAOtroModulo() {
+            if (!moduloActual) return;
+            seleccionarModulo(moduloActual === 'rpi' ? 'catastro' : 'rpi');
         }
 
         function volverSelector() {
