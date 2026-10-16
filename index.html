@@ -985,6 +985,108 @@
             grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
+        #tramiteModalOverlay .modal {
+            max-width: 720px;
+        }
+        .tramite-form .form-group label {
+            letter-spacing: 0.04em;
+            font-size: 0.78rem;
+        }
+        .tramite-form .req {
+            color: var(--danger);
+            margin-left: 2px;
+        }
+        .field-hint {
+            color: var(--text-secondary);
+            display: block;
+            margin-top: 6px;
+            font-size: 0.78rem;
+            line-height: 1.35;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .urgencia-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .urgencia-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 10px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+        }
+        .urgencia-btn:hover {
+            border-color: var(--accent-light);
+            color: var(--text-primary);
+        }
+        .urgencia-btn.active[data-urgencia="Común"] {
+            border-color: var(--accent);
+            background: rgba(91, 127, 149, 0.12);
+            color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.12);
+        }
+        .urgencia-btn.active[data-urgencia="Urgente"] {
+            border-color: #e74c3c;
+            background: var(--urgent-bg);
+            color: #c0392b;
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+        }
+        .photo-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .photo-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 78px;
+            padding: 12px 10px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            background: var(--hover-row);
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .photo-action i {
+            font-size: 1.15rem;
+            color: var(--accent);
+        }
+        .photo-action:hover {
+            border-color: var(--accent);
+            background: var(--bg-secondary);
+        }
+        .photo-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .photo-preview-row img {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+        }
         .form-actions {
             display: flex;
             gap: 10px;
@@ -1690,44 +1792,33 @@
                 <button class="active" data-modulo="rpi" onclick="cambiarModalModulo('rpi')"><i class="fas fa-building"></i> RPI</button>
                 <button data-modulo="catastro" onclick="cambiarModalModulo('catastro')"><i class="fas fa-map"></i> Catastro</button>
             </div>
-            <form id="tramiteForm" onsubmit="saveTramite(event)">
+            <form id="tramiteForm" class="tramite-form" onsubmit="saveTramite(event)">
                 <input type="hidden" id="tramiteId">
                 <input type="hidden" id="tramiteModulo" value="rpi">
+                <input type="hidden" id="tramiteUrgencia" value="">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Fecha *</label>
+                        <label>Fecha <span class="req">*</span></label>
                         <input type="date" id="tramiteFecha" required onchange="calcularSalida()">
                     </div>
                     <div class="form-group">
-                        <label>Tipo de Trámite *</label>
+                        <label>Tipo de Trámite <span class="req">*</span></label>
                         <select id="tramiteTipo" required onchange="calcularSalida()">
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Nombre / Cliente *</label>
-                        <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
-                    </div>
-                    <div class="form-group">
-                        <label>N° de Entrada / Expediente</label>
-                        <div style="display:flex; gap:8px;">
-                            <input type="text" id="tramiteNroEntrada" placeholder="Número" style="flex:1;">
-                            <button type="button" class="btn btn-sm" onclick="openOCRScanner()"><i class="fas fa-camera"></i> Escanear</button>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label>Nombre / Cliente <span class="req">*</span></label>
+                    <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Urgencia</label>
-                        <select id="tramiteUrgencia" onchange="calcularSalida()">
-                            <option value="Común">Común</option>
-                            <option value="Urgente">Urgente</option>
-                        </select>
+                        <label>N° de Entrada / Expediente</label>
+                        <input type="text" id="tramiteNroEntrada" placeholder="Número" inputmode="text" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label>Para *</label>
+                        <label>Para <span class="req">*</span></label>
                         <select id="tramitePara" required>
                             <option value="">Seleccionar...</option>
                         </select>
@@ -1735,23 +1826,44 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Fecha de Salida (Estimada)</label>
-                        <input type="date" id="tramiteSalida" readonly style="background-color:var(--hover-row);">
-                        <small style="color:var(--text-secondary); display:block; margin-top:4px;">Calculada automáticamente según tipo de trámite y urgencia (días hábiles, sin sábados ni domingos)</small>
+                        <label>Urgencia <span class="req">*</span></label>
+                        <div class="urgencia-toggle" role="group" aria-label="Urgencia">
+                            <button type="button" class="urgencia-btn" data-urgencia="Común" onclick="setUrgencia('Común')" aria-pressed="false">
+                                <i class="fas fa-clock"></i> Común
+                            </button>
+                            <button type="button" class="urgencia-btn" data-urgencia="Urgente" onclick="setUrgencia('Urgente')" aria-pressed="false">
+                                <i class="fas fa-bolt"></i> Urgente
+                            </button>
+                        </div>
+                        <span class="field-hint" id="urgenciaHint">Elegí Común o Urgente. Cambia la fecha de salida.</span>
                     </div>
                     <div class="form-group">
-                        <label>Notas</label>
-                        <textarea id="tramiteNotas" rows="2" placeholder="Observaciones..."></textarea>
+                        <label>Fecha de Salida (Estimada)</label>
+                        <input type="date" id="tramiteSalida" readonly style="background-color:var(--hover-row);">
+                        <span class="field-hint">Se calcula sola según el tipo y la urgencia, en días hábiles.</span>
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>Notas</label>
+                    <textarea id="tramiteNotas" rows="2" placeholder="Observaciones..."></textarea>
+                </div>
+                <div class="form-group">
                     <label>Fotografía</label>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-sm" onclick="openCamera()"><i class="fas fa-camera"></i> Tomar Foto</button>
-                        <button type="button" class="btn btn-sm" onclick="document.getElementById('photoFileInput').click()"><i class="fas fa-image"></i> Galería</button>
-                        <input type="file" id="photoFileInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event)">
-                        <img id="photoPreview" src="" alt="Foto" style="display:none; width:60px; height:60px; object-fit:cover; border-radius:8px; border:2px solid var(--border);">
-                        <button type="button" class="btn btn-sm btn-danger" id="removePhotoBtn" style="display:none;" onclick="removePhoto()"><i class="fas fa-trash"></i></button>
+                    <div class="photo-actions">
+                        <button type="button" class="photo-action" onclick="openCamera()">
+                            <i class="fas fa-camera"></i>
+                            Tomar foto
+                        </button>
+                        <button type="button" class="photo-action" onclick="openGallery()">
+                            <i class="fas fa-images"></i>
+                            Galería
+                        </button>
+                    </div>
+                    <input type="file" id="photoCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event)">
+                    <input type="file" id="photoGalleryInput" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event)">
+                    <div class="photo-preview-row" id="photoPreviewRow" style="display:none;">
+                        <img id="photoPreview" src="" alt="Foto del trámite">
+                        <button type="button" class="btn btn-sm btn-danger" id="removePhotoBtn" onclick="removePhoto()"><i class="fas fa-trash"></i> Quitar</button>
                     </div>
                     <input type="hidden" id="tramiteFotoData">
                 </div>
@@ -3550,10 +3662,14 @@
 
             form.reset();
             document.getElementById('tramiteId').value = '';
-            document.getElementById('photoPreview').style.display = 'none';
-            document.getElementById('removePhotoBtn').style.display = 'none';
+            document.getElementById('photoPreviewRow').style.display = 'none';
             document.getElementById('tramiteFotoData').value = '';
+            const cameraInput = document.getElementById('photoCameraInput');
+            const galleryInput = document.getElementById('photoGalleryInput');
+            if (cameraInput) cameraInput.value = '';
+            if (galleryInput) galleryInput.value = '';
             currentPhotoData = null;
+            setUrgencia('');
 
             const moduloInicial = (!id && moduloForzado) ? moduloForzado : (moduloFiltro || 'rpi');
             document.getElementById('tramiteModulo').value = moduloInicial;
@@ -3578,7 +3694,7 @@
                     document.getElementById('tramiteFecha').value = tramite.fecha || '';
                     document.getElementById('tramiteNombreCliente').value = tramite.nombreCliente || '';
                     document.getElementById('tramiteNroEntrada').value = tramite.nroEntrada || '';
-                    document.getElementById('tramiteUrgencia').value = tramite.urgencia || 'Común';
+                    setUrgencia(tramite.urgencia || 'Común');
                     document.getElementById('tramitePara').value = tramite.para || '';
                     document.getElementById('tramiteSalida').value = tramite.salida || '';
                     document.getElementById('tramiteNotas').value = tramite.notas || '';
@@ -3596,8 +3712,7 @@
                     if (tramite.fotoData) {
                         currentPhotoData = tramite.fotoData;
                         document.getElementById('photoPreview').src = tramite.fotoData;
-                        document.getElementById('photoPreview').style.display = 'block';
-                        document.getElementById('removePhotoBtn').style.display = 'inline-flex';
+                        document.getElementById('photoPreviewRow').style.display = 'flex';
                         document.getElementById('tramiteFotoData').value = tramite.fotoData;
                     }
                 }
@@ -3660,12 +3775,29 @@
             return resultado;
         }
 
+        function setUrgencia(valor) {
+            const input = document.getElementById('tramiteUrgencia');
+            if (input) input.value = valor || '';
+            document.querySelectorAll('.urgencia-btn').forEach(btn => {
+                const activo = !!valor && btn.dataset.urgencia === valor;
+                btn.classList.toggle('active', activo);
+                btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
+            });
+            const hint = document.getElementById('urgenciaHint');
+            if (hint) {
+                hint.textContent = valor
+                    ? (valor === 'Urgente' ? 'Urgente: usa los días de trámite urgente.' : 'Común: usa los días de trámite habitual.')
+                    : 'Elegí Común o Urgente. Cambia la fecha de salida.';
+            }
+            if (valor) calcularSalida();
+        }
+
         function calcularSalida() {
             const tipoNombre = document.getElementById('tramiteTipo').value;
             const urgencia = document.getElementById('tramiteUrgencia').value;
             const fechaInput = document.getElementById('tramiteFecha').value;
 
-            if (!tipoNombre || !fechaInput) return;
+            if (!tipoNombre || !fechaInput || !urgencia) return;
 
             const config = getConfig();
             const tipoTramite = config.tiposTramite.find(t => t.nombre === tipoNombre);
@@ -3706,8 +3838,8 @@
                 retirado: false
             };
 
-            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente) {
-                showToast('Por favor complete los campos obligatorios (Fecha, Trámite, Nombre/Cliente y Para).', 'error');
+            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente || !tramite.urgencia) {
+                showToast('Completá fecha, tipo, cliente, para y urgencia (Común o Urgente).', 'error');
                 return;
             }
 
@@ -3830,31 +3962,41 @@
 
         // 5.11 Fotografías
         function openCamera() {
-            const input = document.getElementById('photoFileInput');
-            input.setAttribute('capture', 'environment');
+            const input = document.getElementById('photoCameraInput');
+            input.value = '';
+            input.click();
+        }
+
+        function openGallery() {
+            const input = document.getElementById('photoGalleryInput');
+            input.value = '';
             input.click();
         }
 
         function handlePhotoSelect(event) {
-            const file = event.target.files[0];
+            const file = event.target.files && event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 currentPhotoData = e.target.result;
                 document.getElementById('photoPreview').src = currentPhotoData;
-                document.getElementById('photoPreview').style.display = 'block';
-                document.getElementById('removePhotoBtn').style.display = 'inline-flex';
+                document.getElementById('photoPreviewRow').style.display = 'flex';
                 document.getElementById('tramiteFotoData').value = currentPhotoData;
             };
             reader.readAsDataURL(file);
+            event.target.value = '';
         }
 
         function removePhoto() {
             currentPhotoData = null;
-            document.getElementById('photoPreview').style.display = 'none';
-            document.getElementById('removePhotoBtn').style.display = 'none';
+            document.getElementById('photoPreview').src = '';
+            document.getElementById('photoPreviewRow').style.display = 'none';
             document.getElementById('tramiteFotoData').value = '';
+            const cameraInput = document.getElementById('photoCameraInput');
+            const galleryInput = document.getElementById('photoGalleryInput');
+            if (cameraInput) cameraInput.value = '';
+            if (galleryInput) galleryInput.value = '';
         }
 
         // 5.12 OCR
