@@ -1114,16 +1114,19 @@
             display: flex;
             gap: 6px;
         }
-        .config-list li.escribano-item {
+        .config-list li.escribano-item,
+        .config-list li.tipo-item {
             cursor: default;
             user-select: none;
             touch-action: none;
         }
-        .config-list li.escribano-item.dragging {
+        .config-list li.escribano-item.dragging,
+        .config-list li.tipo-item.dragging {
             opacity: 0.55;
             background: var(--hover-row);
         }
-        .config-list li.escribano-item.drag-over {
+        .config-list li.escribano-item.drag-over,
+        .config-list li.tipo-item.drag-over {
             background: var(--hover-row);
             box-shadow: inset 0 2px 0 var(--accent);
         }
@@ -1610,6 +1613,7 @@
         <div id="page-config" class="page" style="display:none;">
             <div class="config-section">
                 <h3><i class="fas fa-list-check"></i> Tipos de Trámite</h3>
+                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden al crear un trámite.</p>
                 <ul class="config-list" id="tiposTramiteList"></ul>
                 <button class="btn btn-primary" onclick="openTipoTramiteModal()" style="margin-top:12px;">
                     <i class="fas fa-plus"></i> Agregar Tipo de Trámite
@@ -2227,12 +2231,23 @@
         // ---- 3.b  CONFIGURACIÓN (tipos de trámite, escribanos) ----
 
         async function fetchConfigRemote() {
-            const { data: tipos, error: errTipos } = await supabaseClient
+            let tipos = [];
+            const { data: tiposOrden, error: errTiposOrden } = await supabaseClient
                 .from('tipos_tramite')
                 .select('*')
-                .order('nombre');
+                .order('orden', { ascending: true });
 
-            if (errTipos) throw errTipos;
+            if (errTiposOrden) {
+                const { data: tiposNombre, error: errTiposNombre } = await supabaseClient
+                    .from('tipos_tramite')
+                    .select('*')
+                    .order('nombre');
+
+                if (errTiposNombre) throw errTiposNombre;
+                tipos = normalizarOrdenTipos(tiposNombre || []);
+            } else {
+                tipos = normalizarOrdenTipos(tiposOrden || []);
+            }
 
             let escribanos = [];
             const { data: escrOrden, error: errEscrOrden } = await supabaseClient
@@ -2253,9 +2268,29 @@
             }
 
             return {
-                tiposTramite: tipos || [],
+                tiposTramite: tipos,
                 escribanos
             };
+        }
+
+        function normalizarOrdenTipos(tipos) {
+            const conIndice = tipos.map((tipo, index) => ({ tipo, index }));
+
+            conIndice.sort((a, b) => {
+                const ordenA = Number.isFinite(a.tipo.orden) ? a.tipo.orden : a.index;
+                const ordenB = Number.isFinite(b.tipo.orden) ? b.tipo.orden : b.index;
+                if (ordenA !== ordenB) return ordenA - ordenB;
+                return (a.tipo.nombre || '').localeCompare(b.tipo.nombre || '', 'es', { sensitivity: 'base' });
+            });
+
+            return conIndice.map(({ tipo }, index) => ({
+                ...tipo,
+                orden: index
+            }));
+        }
+
+        function getTiposTramiteOrdenados(config = getConfig()) {
+            return normalizarOrdenTipos(config.tiposTramite || []);
         }
 
         function normalizarOrdenEscribanos(escribanos) {
@@ -2308,16 +2343,25 @@
             if (delTipos) throw delTipos;
 
             if (config.tiposTramite.length > 0) {
-                const { error: insTipos } = await supabaseClient
+                const tiposConOrden = config.tiposTramite.map((t, index) => ({
+                    id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
+                    nombre: t.nombre,
+                    formulario: t.formulario || '',
+                    comun: t.comun,
+                    urgente: t.urgente,
+                    catastral: t.catastral || false,
+                    orden: Number.isFinite(t.orden) ? t.orden : index
+                }));
+
+                let { error: insTipos } = await supabaseClient
                     .from('tipos_tramite')
-                    .insert(config.tiposTramite.map(t => ({
-                        id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
-                        nombre: t.nombre,
-                        formulario: t.formulario || '',
-                        comun: t.comun,
-                        urgente: t.urgente,
-                        catastral: t.catastral || false
-                    })));
+                    .insert(tiposConOrden);
+
+                if (insTipos && /orden/i.test(insTipos.message || '')) {
+                    const tiposSinOrden = tiposConOrden.map(({ orden, ...tipo }) => tipo);
+                    ({ error: insTipos } = await supabaseClient.from('tipos_tramite').insert(tiposSinOrden));
+                }
+
                 if (insTipos) throw insTipos;
             }
 
@@ -2366,6 +2410,7 @@
         const MIGRATION_FLAG = 'supabase_migration_done_v2';
         const URGENTE_DIAS_MIGRATION_FLAG = 'config_urgente_en_dias_v1';
         const ESCRIBANOS_ORDEN_MIGRATION_FLAG = 'escribanos_orden_v1';
+        const TIPOS_ORDEN_MIGRATION_FLAG = 'tipos_tramite_orden_v1';
 
         function convertirUrgenteHorasADias(valor) {
             const v = parseInt(valor);
@@ -2440,6 +2485,35 @@
             return config;
         }
 
+        async function aplicarMigracionTiposOrden(config) {
+            if (!config.tiposTramite || config.tiposTramite.length === 0) {
+                localStorage.setItem(TIPOS_ORDEN_MIGRATION_FLAG, 'true');
+                return config;
+            }
+
+            const yaMigrado = localStorage.getItem(TIPOS_ORDEN_MIGRATION_FLAG) === 'true';
+            const normalizados = normalizarOrdenTipos(config.tiposTramite);
+            const necesitaGuardar = !yaMigrado || normalizados.some((t, i) => t.orden !== config.tiposTramite[i]?.orden);
+
+            config.tiposTramite = normalizados;
+            localStorage.setItem(TIPOS_ORDEN_MIGRATION_FLAG, 'true');
+
+            if (necesitaGuardar) {
+                configCache = config;
+                persistConfigCache(config);
+                if (isAppOnline()) {
+                    try {
+                        await saveConfigSupabaseRemote(config);
+                    } catch (e) {
+                        console.error('Error al guardar migración de orden de tipos de trámite:', e);
+                        enqueueSync({ type: 'save_config', payload: config });
+                    }
+                }
+            }
+
+            return config;
+        }
+
         async function migrarDesdeLocalStorage() {
             // Verificar si ya se migró
             if (localStorage.getItem(MIGRATION_FLAG) === 'true') return;
@@ -2505,13 +2579,14 @@
                 try {
                     // Tipos
                     if (localConfig.tiposTramite.length > 0) {
-                        const tiposRows = localConfig.tiposTramite.map(t => ({
+                        const tiposRows = localConfig.tiposTramite.map((t, index) => ({
                             id: t.id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString() + Math.random()),
                             nombre: t.nombre,
                             formulario: t.formulario || '',
                             comun: t.comun || 15,
                             urgente: convertirUrgenteHorasADias(t.urgente || 48),
-                            catastral: t.catastral || false
+                            catastral: t.catastral || false,
+                            orden: Number.isFinite(t.orden) ? t.orden : index
                         }));
                         const { error: tErr } = await supabaseClient.from('tipos_tramite').insert(tiposRows);
                         if (tErr) throw tErr;
@@ -2592,6 +2667,7 @@
         // saveConfig() asíncrono
         async function saveConfig(config, options = {}) {
             const { silent = false } = options;
+            config.tiposTramite = normalizarOrdenTipos(config.tiposTramite || []);
             config.escribanos = normalizarOrdenEscribanos(config.escribanos || []);
             configCache = config;
             persistConfigCache(config);
@@ -2656,6 +2732,7 @@
 
             configCache = await aplicarMigracionUrgenteADias(configCache);
             configCache = await aplicarMigracionEscribanosOrden(configCache);
+            configCache = await aplicarMigracionTiposOrden(configCache);
 
             updatePendingSyncBadge();
         }
@@ -3497,12 +3574,16 @@
         function cargarTiposTramiteModal(modulo) {
             const config = getConfig();
             const tipoSelect = document.getElementById('tramiteTipo');
-            const opciones = config.tiposTramite.filter(t => {
+            const seleccionado = tipoSelect.value;
+            const opciones = getTiposTramiteOrdenados(config).filter(t => {
                 if (modulo === 'rpi') return !t.catastral;
                 return t.catastral === true;
             });
             tipoSelect.innerHTML = '<option value="">Seleccionar...</option>' +
                 opciones.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
+            if (seleccionado && opciones.some(t => t.nombre === seleccionado)) {
+                tipoSelect.value = seleccionado;
+            }
         }
 
         function cargarEscribanos() {
@@ -3816,15 +3897,18 @@
 
         // 5.13 Configuración
         function renderConfig() {
-            initEscribanosSortable();
+            initConfigSortables();
             const config = getConfig();
 
             const tiposList = document.getElementById('tiposTramiteList');
-            if (config.tiposTramite.length === 0) {
+            const tiposOrdenados = getTiposTramiteOrdenados(config);
+            if (tiposOrdenados.length === 0) {
                 tiposList.innerHTML = '<li style="color: var(--text-secondary); padding: 12px;">No hay tipos de trámite configurados.</li>';
             } else {
-                tiposList.innerHTML = config.tiposTramite.map((t, i) => `
-                            <li>
+                const lastTipo = tiposOrdenados.length - 1;
+                tiposList.innerHTML = tiposOrdenados.map((t, i) => `
+                            <li class="tipo-item" data-index="${i}">
+                                <span class="drag-handle" title="Arrastrar para reordenar"><i class="fas fa-grip-vertical"></i></span>
                                 <div class="item-info">
                                     <strong>${t.nombre}</strong>
                                     ${t.formulario ? `<span style="color:var(--text-secondary);"> (Form. ${t.formulario})</span>` : ''}
@@ -3832,8 +3916,12 @@
                                     <br><span class="badge-modulo ${t.catastral ? 'catastro' : 'rpi'}">${t.catastral ? 'Catastro' : 'RPI'}</span>
                                 </div>
                                 <div class="item-actions">
-                                    <button class="btn btn-sm btn-icon" onclick="openTipoTramiteModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-icon btn-danger" onclick="deleteTipoTramite(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
+                                    <div class="order-buttons">
+                                        <button type="button" class="btn btn-sm btn-icon" onclick="moveTipoTramite(${i}, -1)" title="Subir" ${i === 0 ? 'disabled' : ''}><i class="fas fa-chevron-up"></i></button>
+                                        <button type="button" class="btn btn-sm btn-icon" onclick="moveTipoTramite(${i}, 1)" title="Bajar" ${i === lastTipo ? 'disabled' : ''}><i class="fas fa-chevron-down"></i></button>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-icon" onclick="openTipoTramiteModal(${i})" title="Editar"><i class="fas fa-edit"></i></button>
+                                    <button type="button" class="btn btn-sm btn-icon btn-danger" onclick="deleteTipoTramite(${i})" title="Eliminar"><i class="fas fa-trash"></i></button>
                                 </div>
                             </li>
                         `).join('');
@@ -3862,69 +3950,34 @@
             }
         }
 
-        let escribanosSortDrag = null;
+        let configSortDrag = null;
 
-        function initEscribanosSortable() {
-            const list = document.getElementById('escribanosList');
+        function initConfigSortables() {
+            bindConfigSortable('tiposTramiteList', 'li.tipo-item', reorderTiposTramite);
+            bindConfigSortable('escribanosList', 'li.escribano-item', reorderEscribanos);
+            bindConfigSortDocumentEvents();
+        }
+
+        function bindConfigSortable(listId, itemSelector, reorder) {
+            const list = document.getElementById(listId);
             if (!list || list.dataset.sortReady === 'true') return;
             list.dataset.sortReady = 'true';
 
-            const getItemAtY = (clientY) => {
-                const items = [...list.querySelectorAll('li.escribano-item')];
-                return items.find(item => {
-                    const rect = item.getBoundingClientRect();
-                    return clientY >= rect.top && clientY <= rect.bottom;
-                }) || null;
-            };
-
-            const finishDrag = async (clientY) => {
-                if (!escribanosSortDrag) return;
-
-                const { li, fromIndex, handle } = escribanosSortDrag;
-                li.classList.remove('dragging');
-                handle.classList.remove('is-dragging');
-                list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
-                escribanosSortDrag = null;
-
-                const target = getItemAtY(clientY);
-                if (!target) return;
-
-                let toIndex = parseInt(target.dataset.index, 10);
-                if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex) || fromIndex === toIndex) return;
-
-                const rect = target.getBoundingClientRect();
-                const dropAfter = clientY > rect.top + rect.height / 2;
-                if (dropAfter && toIndex < fromIndex) toIndex += 1;
-                if (!dropAfter && toIndex > fromIndex) toIndex -= 1;
-
-                if (toIndex !== fromIndex) {
-                    await reorderEscribanos(fromIndex, toIndex);
-                }
-            };
-
             const startDrag = (clientY, handle) => {
-                const li = handle.closest('li.escribano-item');
+                const li = handle.closest(itemSelector);
                 if (!li) return;
 
-                escribanosSortDrag = {
+                configSortDrag = {
+                    list,
+                    itemSelector,
+                    reorder,
                     li,
                     handle,
-                    fromIndex: parseInt(li.dataset.index, 10),
-                    startY: clientY
+                    fromIndex: parseInt(li.dataset.index, 10)
                 };
 
                 li.classList.add('dragging');
                 handle.classList.add('is-dragging');
-            };
-
-            const moveDrag = (clientY) => {
-                if (!escribanosSortDrag) return;
-
-                list.querySelectorAll('li.escribano-item').forEach(el => el.classList.remove('drag-over'));
-                const over = getItemAtY(clientY);
-                if (over && over !== escribanosSortDrag.li) {
-                    over.classList.add('drag-over');
-                }
             };
 
             list.addEventListener('mousedown', (e) => {
@@ -3940,29 +3993,105 @@
                 e.preventDefault();
                 startDrag(e.touches[0].clientY, handle);
             }, { passive: false });
+        }
+
+        function bindConfigSortDocumentEvents() {
+            if (document.body.dataset.configSortBound === 'true') return;
+            document.body.dataset.configSortBound = 'true';
+
+            const itemAtY = (clientY) => {
+                if (!configSortDrag) return null;
+                const items = [...configSortDrag.list.querySelectorAll(configSortDrag.itemSelector)];
+                return items.find(item => {
+                    const rect = item.getBoundingClientRect();
+                    return clientY >= rect.top && clientY <= rect.bottom;
+                }) || null;
+            };
+
+            const moveDrag = (clientY) => {
+                if (!configSortDrag) return;
+                configSortDrag.list.querySelectorAll(configSortDrag.itemSelector).forEach(el => el.classList.remove('drag-over'));
+                const over = itemAtY(clientY);
+                if (over && over !== configSortDrag.li) over.classList.add('drag-over');
+            };
+
+            const finishDrag = async (clientY) => {
+                if (!configSortDrag) return;
+
+                const drag = configSortDrag;
+                drag.li.classList.remove('dragging');
+                drag.handle.classList.remove('is-dragging');
+                drag.list.querySelectorAll(drag.itemSelector).forEach(el => el.classList.remove('drag-over'));
+                configSortDrag = null;
+
+                const items = [...drag.list.querySelectorAll(drag.itemSelector)];
+                const targetItem = items.find(item => {
+                    const rect = item.getBoundingClientRect();
+                    return clientY >= rect.top && clientY <= rect.bottom;
+                }) || null;
+                if (!targetItem) return;
+
+                let toIndex = parseInt(targetItem.dataset.index, 10);
+                const fromIndex = drag.fromIndex;
+                if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex) || fromIndex === toIndex) return;
+
+                const rect = targetItem.getBoundingClientRect();
+                const dropAfter = clientY > rect.top + rect.height / 2;
+                if (dropAfter && toIndex < fromIndex) toIndex += 1;
+                if (!dropAfter && toIndex > fromIndex) toIndex -= 1;
+
+                if (toIndex !== fromIndex) {
+                    await drag.reorder(fromIndex, toIndex);
+                }
+            };
 
             document.addEventListener('mousemove', (e) => {
-                if (!escribanosSortDrag) return;
+                if (!configSortDrag) return;
                 e.preventDefault();
                 moveDrag(e.clientY);
             });
 
             document.addEventListener('touchmove', (e) => {
-                if (!escribanosSortDrag) return;
+                if (!configSortDrag) return;
                 e.preventDefault();
                 moveDrag(e.touches[0].clientY);
             }, { passive: false });
 
             document.addEventListener('mouseup', (e) => {
-                if (!escribanosSortDrag) return;
+                if (!configSortDrag) return;
                 finishDrag(e.clientY);
             });
 
             document.addEventListener('touchend', (e) => {
-                if (!escribanosSortDrag) return;
+                if (!configSortDrag) return;
                 const touch = e.changedTouches[0];
-                finishDrag(touch ? touch.clientY : escribanosSortDrag.startY);
+                finishDrag(touch ? touch.clientY : 0);
             });
+        }
+
+        async function moveTipoTramite(index, direction) {
+            const toIndex = index + direction;
+            const total = getTiposTramiteOrdenados().length;
+            if (toIndex < 0 || toIndex >= total) return;
+            await reorderTiposTramite(index, toIndex);
+        }
+
+        async function reorderTiposTramite(fromIndex, toIndex) {
+            try {
+                const config = getConfig();
+                const items = [...getTiposTramiteOrdenados(config)];
+                const [moved] = items.splice(fromIndex, 1);
+                items.splice(toIndex, 0, moved);
+                config.tiposTramite = items.map((tipo, index) => ({ ...tipo, orden: index }));
+
+                await saveConfig(config, { silent: true });
+                renderConfig();
+                const moduloActivo = document.getElementById('tramiteModulo')?.value || 'rpi';
+                cargarTiposTramiteModal(moduloActivo);
+                showToast('Orden de tipos de trámite actualizado.', 'success');
+            } catch (error) {
+                showToast('Error al reordenar los tipos de trámite.', 'error');
+            }
         }
 
         async function moveEscribano(index, direction) {
@@ -3978,7 +4107,9 @@
                 const items = [...getEscribanosOrdenados(config)];
                 const [moved] = items.splice(fromIndex, 1);
                 items.splice(toIndex, 0, moved);
-                config.escribanos = normalizarOrdenEscribanos(items);
+                // El orden visual ya quedó en el arreglo. Hay que reescribir `orden`
+                // antes de normalizar: si no, el sort por el valor anterior deshace el movimiento.
+                config.escribanos = items.map((escribano, index) => ({ ...escribano, orden: index }));
 
                 await saveConfig(config, { silent: true });
                 renderConfig();
@@ -4001,7 +4132,7 @@
             if (index !== null && index >= 0) {
                 title.textContent = 'Editar Tipo de Trámite';
                 const config = getConfig();
-                const tipo = config.tiposTramite[index];
+                const tipo = getTiposTramiteOrdenados(config)[index];
                 if (tipo) {
                     document.getElementById('tipoTramiteId').value = index;
                     document.getElementById('tipoTramiteNombre').value = tipo.nombre;
@@ -4039,23 +4170,32 @@
 
             try {
                 const config = getConfig();
+                const tiposOrdenados = getTiposTramiteOrdenados(config);
 
-                const duplicate = config.tiposTramite.find((t, i) => t.nombre.toLowerCase() === tipo.nombre.toLowerCase() && i !==
-                    parseInt(index));
+                const duplicate = tiposOrdenados.find((t, i) => t.nombre.toLowerCase() === tipo.nombre.toLowerCase() && i !== parseInt(index));
                 if (duplicate) {
                     showToast('Ya existe un tipo de trámite con ese nombre.', 'warning');
                     return;
                 }
 
                 if (index !== '' && index >= 0) {
-                    config.tiposTramite[index] = tipo;
+                    const previo = tiposOrdenados[parseInt(index, 10)];
+                    tiposOrdenados[parseInt(index, 10)] = {
+                        ...previo,
+                        ...tipo,
+                        id: previo.id,
+                        orden: previo.orden
+                    };
                 } else {
-                    config.tiposTramite.push(tipo);
+                    tiposOrdenados.push({ ...tipo, orden: tiposOrdenados.length });
                 }
+
+                config.tiposTramite = tiposOrdenados;
 
                 await saveConfig(config);
                 closeTipoTramiteModal();
                 renderConfig();
+                cargarTiposTramiteModal(document.getElementById('tramiteModulo')?.value || 'rpi');
                 showToast('Tipo de trámite guardado correctamente.', 'success');
             } catch (error) {
                 showToast('Error al guardar el tipo de trámite.', 'error');
@@ -4066,9 +4206,12 @@
             if (!confirm('¿Eliminar este tipo de trámite?')) return;
             try {
                 const config = getConfig();
-                config.tiposTramite.splice(index, 1);
+                const tiposOrdenados = getTiposTramiteOrdenados(config);
+                tiposOrdenados.splice(index, 1);
+                config.tiposTramite = tiposOrdenados.map((tipo, i) => ({ ...tipo, orden: i }));
                 await saveConfig(config);
                 renderConfig();
+                cargarTiposTramiteModal(document.getElementById('tramiteModulo')?.value || 'rpi');
                 showToast('Tipo de trámite eliminado.', 'success');
             } catch (error) {
                 showToast('Error al eliminar el tipo de trámite.', 'error');
