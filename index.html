@@ -1091,6 +1091,37 @@
             gap: 8px;
             font-size: 1.1rem;
         }
+        .tramites-heading-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-tramite-plus {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.62rem;
+            line-height: 1;
+            flex-shrink: 0;
+            transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        .btn-tramite-plus:hover {
+            color: var(--accent);
+            border-color: var(--accent-light);
+            background: var(--hover-row);
+        }
+        .btn-tramite-plus:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
         .config-list {
             list-style: none;
         }
@@ -1542,7 +1573,15 @@
                 </div>
 
                 <div class="config-section">
-                    <h3><i class="fas fa-chart-simple"></i> Trámites</h3>
+                    <h3>
+                        <i class="fas fa-chart-simple"></i>
+                        <span class="tramites-heading-label">
+                            Trámites
+                            <button type="button" class="btn-tramite-plus" onclick="nuevoTramiteDesdeModulo()" title="Nuevo trámite" aria-label="Nuevo trámite">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    </h3>
                     <div class="vencimiento-buscador">
                         <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
                     </div>
@@ -3499,7 +3538,11 @@
         }
 
         // 5.9 Modal Trámite
-        function openTramiteModal(id = null) {
+        function nuevoTramiteDesdeModulo() {
+            openTramiteModal(null, moduloActual || 'rpi');
+        }
+
+        function openTramiteModal(id = null, moduloForzado = null) {
             editingTramiteId = id;
             const modal = document.getElementById('tramiteModalOverlay');
             const title = document.getElementById('tramiteModalTitle');
@@ -3512,7 +3555,7 @@
             document.getElementById('tramiteFotoData').value = '';
             currentPhotoData = null;
 
-            const moduloInicial = moduloFiltro || 'rpi';
+            const moduloInicial = (!id && moduloForzado) ? moduloForzado : (moduloFiltro || 'rpi');
             document.getElementById('tramiteModulo').value = moduloInicial;
 
             const tabs = document.querySelectorAll('#modalTabs button');
