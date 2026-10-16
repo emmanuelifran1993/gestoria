@@ -1193,6 +1193,14 @@
             gap: 8px;
             font-size: 1.1rem;
         }
+        .page { display: none; }
+        .page.active { display: block; }
+        #moduleDashboard { display: none; }
+        #moduleDashboard.is-open { display: block; }
+        #vencimientosList {
+            max-height: 400px;
+            overflow-y: auto;
+        }
         .tramites-heading-label {
             display: inline-flex;
             align-items: center;
@@ -1442,9 +1450,61 @@
             .sidebar {
                 width: 280px;
             }
+            body {
+                height: 100dvh;
+                min-height: 100dvh;
+                overflow: hidden;
+            }
             .main-content {
                 margin-left: 0;
+                padding: 12px 12px calc(8px + env(safe-area-inset-bottom));
+                height: 100%;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .top-bar {
+                flex-shrink: 0;
+                margin-bottom: 12px;
+            }
+            .page.active {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+            }
+            #page-home.active:has(#moduleDashboard.is-open) {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            #moduleDashboard.is-open {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+                min-height: 0;
+                overflow: hidden;
+            }
+            #moduleDashboard.is-open > .stats-grid,
+            #moduleDashboard.is-open > div:first-child {
+                flex-shrink: 0;
+            }
+            #moduleDashboard.is-open .config-section {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 0;
                 padding: 16px;
+            }
+            #moduleDashboard.is-open .config-section h3,
+            #moduleDashboard.is-open .vencimiento-buscador {
+                flex-shrink: 0;
+            }
+            #moduleDashboard.is-open #vencimientosList {
+                flex: 1;
+                min-height: 0;
+                max-height: none;
             }
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1644,7 +1704,7 @@
                 </div>
             </div>
 
-            <div id="moduleDashboard" style="display:none;">
+            <div id="moduleDashboard">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
                     <h2 id="moduleTitle" style="font-size:1.5rem;">RPI</h2>
                     <button class="btn btn-switch-modulo btn-catastro" id="btnCambiarModulo" onclick="cambiarAOtroModulo()">
@@ -1687,7 +1747,7 @@
                     <div class="vencimiento-buscador">
                         <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
                     </div>
-                    <div id="vencimientosList" style="max-height:400px; overflow-y:auto;">
+                    <div id="vencimientosList">
                         <p style="color:var(--text-secondary);">No hay trámites registrados.</p>
                     </div>
                 </div>
@@ -1695,7 +1755,7 @@
         </div>
 
         <!-- Página Trámites -->
-        <div id="page-tramites" class="page" style="display:none;">
+        <div id="page-tramites" class="page">
             <div class="selector-tramite" id="tramiteSelector">
                 <button class="active-rpi" data-modulo="rpi" onclick="cambiarFiltroModulo('rpi')">
                     <i class="fas fa-building"></i> RPI
@@ -1751,7 +1811,7 @@
         </div>
 
         <!-- Página Configuración -->
-        <div id="page-config" class="page" style="display:none;">
+        <div id="page-config" class="page">
             <div class="config-section">
                 <h3><i class="fas fa-list-check"></i> Tipos de Trámite</h3>
                 <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden al crear un trámite.</p>
@@ -2934,9 +2994,12 @@
             document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
             document.querySelector(`.sidebar-nav a[data-page="${page}"]`)?.classList.add('active');
 
-            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.remove('active');
+                p.style.display = '';
+            });
             const pageEl = document.getElementById(`page-${page}`);
-            if (pageEl) pageEl.style.display = 'block';
+            if (pageEl) pageEl.classList.add('active');
 
             const titles = { home: 'Inicio', tramites: 'Trámites', config: 'Configuración' };
             document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
@@ -2978,7 +3041,7 @@
         function seleccionarModulo(modulo) {
             moduloActual = modulo;
             document.getElementById('moduleSelector').style.display = 'none';
-            document.getElementById('moduleDashboard').style.display = 'block';
+            document.getElementById('moduleDashboard').classList.add('is-open');
             document.getElementById('moduleTitle').textContent = modulo.toUpperCase();
             document.getElementById('vencimientoSearchInput').value = '';
             filtroDashboard = 'total';
@@ -3009,8 +3072,8 @@
             filtroDashboard = 'total';
             filtroMesDashboard = '';
             cerrarMenuTotal();
-            document.getElementById('moduleSelector').style.display = 'block';
-            document.getElementById('moduleDashboard').style.display = 'none';
+            document.getElementById('moduleSelector').style.display = '';
+            document.getElementById('moduleDashboard').classList.remove('is-open');
         }
 
         function cambiarFiltroModulo(modulo) {
