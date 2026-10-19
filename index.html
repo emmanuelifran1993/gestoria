@@ -1193,6 +1193,65 @@
             gap: 8px;
             font-size: 1.1rem;
         }
+        .config-fold {
+            padding: 0;
+            overflow: hidden;
+        }
+        .config-fold-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px;
+            min-height: 56px;
+            background: transparent;
+            border: none;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .config-fold-btn:hover,
+        .config-fold-btn:focus-visible {
+            background: var(--hover-row);
+        }
+        .config-fold-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+        .config-fold-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        .config-fold-caret {
+            color: var(--text-secondary);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+        .config-fold.open .config-fold-caret {
+            transform: rotate(180deg);
+        }
+        .config-fold-body {
+            display: none;
+            padding: 0 20px 20px;
+        }
+        .config-fold.open .config-fold-body {
+            display: block;
+        }
+        .config-hint {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0 0 12px 0;
+            line-height: 1.4;
+        }
+        #page-config {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
         .page { display: none; }
         .page.active { display: block; }
         #moduleDashboard { display: none; }
@@ -1340,7 +1399,7 @@
         .config-list li.tipo-item {
             cursor: default;
             user-select: none;
-            touch-action: none;
+            touch-action: pan-y;
         }
         .config-list li.escribano-item.dragging,
         .config-list li.tipo-item.dragging {
@@ -1612,6 +1671,15 @@
                 flex: 1;
                 min-height: 0;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+            }
+            #page-config .config-fold-btn {
+                min-height: 64px;
+                padding: 16px 16px;
+            }
+            #page-config .config-fold-body {
+                padding: 0 16px 16px;
             }
             #page-home.active:has(#moduleDashboard.is-open) {
                 display: flex;
@@ -1892,28 +1960,43 @@
 
         <!-- Página Configuración -->
         <div id="page-config" class="page">
-            <div class="config-section">
-                <h3><i class="fas fa-list-check"></i> Tipos de Trámite</h3>
-                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden al crear un trámite.</p>
-                <ul class="config-list" id="tiposTramiteList"></ul>
-                <button class="btn btn-primary" onclick="openTipoTramiteModal()" style="margin-top:12px;">
-                    <i class="fas fa-plus"></i> Agregar Tipo de Trámite
+            <div class="config-section config-fold">
+                <button type="button" class="config-fold-btn" aria-expanded="false" aria-controls="configTiposBody" onclick="toggleConfigFold(this)">
+                    <span class="config-fold-title"><i class="fas fa-list-check"></i> Tipos de Trámite</span>
+                    <i class="fas fa-chevron-down config-fold-caret" aria-hidden="true"></i>
                 </button>
+                <div class="config-fold-body" id="configTiposBody">
+                    <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden al crear un trámite.</p>
+                    <ul class="config-list" id="tiposTramiteList"></ul>
+                    <button class="btn btn-primary" onclick="openTipoTramiteModal()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Agregar Tipo de Trámite
+                    </button>
+                </div>
             </div>
-            <div class="config-section">
-                <h3><i class="fas fa-user-tie"></i> Solicitante</h3>
-                <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden en la lista "Para".</p>
-                <ul class="config-list" id="escribanosList"></ul>
-                <button class="btn btn-primary" onclick="openEscribanoModal()" style="margin-top:12px;">
-                    <i class="fas fa-plus"></i> Agregar Escribano
+            <div class="config-section config-fold">
+                <button type="button" class="config-fold-btn" aria-expanded="false" aria-controls="configSolicitanteBody" onclick="toggleConfigFold(this)">
+                    <span class="config-fold-title"><i class="fas fa-user-tie"></i> Solicitante</span>
+                    <i class="fas fa-chevron-down config-fold-caret" aria-hidden="true"></i>
                 </button>
+                <div class="config-fold-body" id="configSolicitanteBody">
+                    <p class="config-hint"><i class="fas fa-grip-vertical"></i> Usá las flechas o arrastrá el ícono ⋮⋮ para cambiar el orden en la lista "Para".</p>
+                    <ul class="config-list" id="escribanosList"></ul>
+                    <button class="btn btn-primary" onclick="openEscribanoModal()" style="margin-top:12px;">
+                        <i class="fas fa-plus"></i> Agregar Escribano
+                    </button>
+                </div>
             </div>
-            <div class="config-section">
-                <h3><i class="fas fa-database"></i> Respaldo de Datos</h3>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-                    <button class="btn" onclick="exportBackup()"><i class="fas fa-download"></i> Exportar Backup (JSON)</button>
-                    <button class="btn" onclick="document.getElementById('restoreFileInput').click()"><i class="fas fa-upload"></i> Restaurar Backup</button>
-                    <input type="file" id="restoreFileInput" accept=".json" style="display:none;" onchange="handleRestoreBackup(event)">
+            <div class="config-section config-fold">
+                <button type="button" class="config-fold-btn" aria-expanded="false" aria-controls="configRespaldoBody" onclick="toggleConfigFold(this)">
+                    <span class="config-fold-title"><i class="fas fa-database"></i> Respaldo de Datos</span>
+                    <i class="fas fa-chevron-down config-fold-caret" aria-hidden="true"></i>
+                </button>
+                <div class="config-fold-body" id="configRespaldoBody">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn" onclick="exportBackup()"><i class="fas fa-download"></i> Exportar Backup (JSON)</button>
+                        <button class="btn" onclick="document.getElementById('restoreFileInput').click()"><i class="fas fa-upload"></i> Restaurar Backup</button>
+                        <input type="file" id="restoreFileInput" accept=".json" style="display:none;" onchange="handleRestoreBackup(event)">
+                    </div>
                 </div>
             </div>
         </div>
@@ -4247,6 +4330,13 @@
         }
 
         // 5.13 Configuración
+        function toggleConfigFold(button) {
+            const section = button.closest('.config-fold');
+            if (!section) return;
+            const open = section.classList.toggle('open');
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
         function renderConfig() {
             initConfigSortables();
             const config = getConfig();
