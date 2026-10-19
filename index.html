@@ -1197,6 +1197,87 @@
         .page.active { display: block; }
         #moduleDashboard { display: none; }
         #moduleDashboard.is-open { display: block; }
+        .modulo-acciones {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filtro-wrap {
+            position: relative;
+            z-index: 5;
+        }
+        .filtro-wrap.menu-open {
+            z-index: 40;
+        }
+        .btn-filtro.is-active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: #eef3f7;
+        }
+        .dark-mode .btn-filtro.is-active {
+            background: #243038;
+        }
+        .filtro-caret {
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+        }
+        .filtro-caret.open {
+            transform: rotate(180deg);
+        }
+        .filtro-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 210px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+            overflow: hidden;
+            z-index: 41;
+            padding: 6px;
+        }
+        .filtro-menu.open {
+            display: block;
+        }
+        .filtro-menu button {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            color: var(--text-primary);
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+        .filtro-menu button i {
+            width: 16px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        .filtro-menu button:hover {
+            background: var(--hover-row);
+        }
+        .filtro-menu button.active {
+            background: #eef3f7;
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .filtro-menu button.active i {
+            color: var(--accent);
+        }
+        .dark-mode .filtro-menu button.active {
+            background: #243038;
+        }
         #vencimientosList {
             max-height: 400px;
             overflow-y: auto;
@@ -1428,6 +1509,65 @@
             color: var(--text-secondary);
             min-width: 140px;
         }
+        .vencimiento-detalle-expandido {
+            position: relative;
+            padding-right: 76px;
+        }
+        .vencimiento-acciones {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 2px;
+        }
+        .vencimiento-accion {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #7d8b9c;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .vencimiento-accion:hover {
+            color: #5c6b7e;
+            background: rgba(125, 139, 156, 0.16);
+        }
+        .vencimiento-accion:focus-visible {
+            outline: 2px solid #8a97a8;
+            outline-offset: 1px;
+        }
+        body.dark-mode .vencimiento-accion {
+            color: #a8b4c2;
+        }
+        body.dark-mode .vencimiento-accion:hover {
+            color: #d5dde6;
+            background: rgba(168, 180, 194, 0.14);
+        }
+        .detalle-row-retirado {
+            align-items: center;
+        }
+        .detalle-row-retirado input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #7d8b9c;
+        }
+        .retirado-casillero {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .retirado-fecha {
+            color: var(--text-primary);
+        }
         .vencimiento-buscador {
             margin-bottom: 12px;
         }
@@ -1485,7 +1625,7 @@
                 min-height: 0;
                 overflow: hidden;
             }
-            #moduleDashboard.is-open > .stats-grid,
+            #moduleDashboard.is-open > .modulo-acciones,
             #moduleDashboard.is-open > div:first-child {
                 flex-shrink: 0;
             }
@@ -1660,12 +1800,6 @@
             <a data-page="home" class="active" onclick="navigateTo('home')">
                 <i class="fas fa-home"></i> Inicio
             </a>
-            <a data-page="tramites" onclick="navigateTo('tramites')">
-                <i class="fas fa-file-signature"></i> Trámites
-            </a>
-            <a onclick="abrirMenuExportarImportar()">
-                <i class="fas fa-file-export"></i> Exportar / Importar
-            </a>
             <a data-page="config" onclick="navigateTo('config')">
                 <i class="fas fa-gear"></i> Configuración
             </a>
@@ -1712,37 +1846,37 @@
                     </button>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-total-wrap" id="statTotalWrap">
-                        <button type="button" class="stat-card active" data-filter="total" id="statTotalBtn" onclick="filtrarDashboard('total', event)" aria-pressed="true" aria-haspopup="true" aria-expanded="false">
-                            <div class="stat-icon blue"><i class="fas fa-file-lines"></i></div>
-                            <div class="stat-info"><h3>Total <i class="fas fa-chevron-down stat-total-caret" id="statTotalCaret"></i></h3><p id="statTotal">0</p></div>
+                <div class="modulo-acciones">
+                    <button type="button" class="btn btn-primary" onclick="nuevoTramiteDesdeModulo()">
+                        <i class="fas fa-plus"></i> Nuevo Trámite
+                    </button>
+                    <div class="filtro-wrap" id="filtroWrap">
+                        <button type="button" class="btn btn-filtro" id="btnFiltro" onclick="toggleMenuFiltro(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="filtroMenu">
+                            <i class="fas fa-filter"></i>
+                            <span id="filtroLabel">Filtro</span>
+                            <i class="fas fa-chevron-down filtro-caret" id="filtroCaret"></i>
                         </button>
-                        <div class="stat-month-menu" id="statTotalMenu" role="menu"></div>
+                        <div class="filtro-menu" id="filtroMenu" role="menu" aria-label="Filtrar trámites">
+                            <button type="button" role="menuitemradio" data-filter="total" aria-checked="true" onclick="filtrarDashboard('total', event)">
+                                <i class="fas fa-list"></i> Todos
+                            </button>
+                            <button type="button" role="menuitemradio" data-filter="por-salir" aria-checked="false" onclick="filtrarDashboard('por-salir', event)">
+                                <i class="fas fa-clock"></i> Por salir
+                            </button>
+                            <button type="button" role="menuitemradio" data-filter="para-retirar" aria-checked="false" onclick="filtrarDashboard('para-retirar', event)">
+                                <i class="fas fa-box-open"></i> Para retirar
+                            </button>
+                            <button type="button" role="menuitemradio" data-filter="pendiente" aria-checked="false" onclick="filtrarDashboard('pendiente', event)">
+                                <i class="fas fa-hourglass-half"></i> Pendiente
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" class="stat-card" data-filter="por-salir" onclick="filtrarDashboard('por-salir')" aria-pressed="false">
-                        <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
-                        <div class="stat-info"><h3>Por Salir</h3><p id="statPorSalir">0</p></div>
-                    </button>
-                    <button type="button" class="stat-card" data-filter="para-retirar" onclick="filtrarDashboard('para-retirar')" aria-pressed="false">
-                        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
-                        <div class="stat-info"><h3>Para Retirar</h3><p id="statParaRetirar">0</p></div>
-                    </button>
-                    <button type="button" class="stat-card" data-filter="pendiente" onclick="filtrarDashboard('pendiente')" aria-pressed="false">
-                        <div class="stat-icon green"><i class="fas fa-hourglass-half"></i></div>
-                        <div class="stat-info"><h3>Pendiente</h3><p id="statPendiente">0</p></div>
-                    </button>
                 </div>
 
                 <div class="config-section">
                     <h3>
                         <i class="fas fa-chart-simple"></i>
-                        <span class="tramites-heading-label">
-                            Trámites
-                            <button type="button" class="btn-tramite-plus" onclick="nuevoTramiteDesdeModulo()" title="Nuevo trámite" aria-label="Nuevo trámite">
-                                <i class="fas fa-plus" aria-hidden="true"></i>
-                            </button>
-                        </span>
+                        Trámites
                     </h3>
                     <div class="vencimiento-buscador">
                         <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
@@ -1754,61 +1888,7 @@
             </div>
         </div>
 
-        <!-- Página Trámites -->
-        <div id="page-tramites" class="page">
-            <div class="selector-tramite" id="tramiteSelector">
-                <button class="active-rpi" data-modulo="rpi" onclick="cambiarFiltroModulo('rpi')">
-                    <i class="fas fa-building"></i> RPI
-                </button>
-                <button data-modulo="catastro" onclick="cambiarFiltroModulo('catastro')">
-                    <i class="fas fa-map"></i> Catastro
-                </button>
-            </div>
-
-            <div class="toolbar">
-                <button class="btn btn-primary btn-nuevo-tramite" onclick="openTramiteModal()"><i class="fas fa-plus"></i> Nuevo Trámite</button>
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar trámites..." oninput="renderTable()">
-                </div>
-                <div class="filter-group">
-                    <select id="filterTramite" onchange="renderTable()"><option value="">Todos los trámites</option></select>
-                    <select id="filterEscribano" onchange="renderTable()"><option value="">Todos los escribanos</option></select>
-                    <select id="filterEstado" onchange="renderTable()">
-                        <option value="">Todos los estados</option>
-                        <option value="on-time">Al día</option>
-                        <option value="warning">Próximo a finalizar</option>
-                        <option value="expired">Para retirar</option>
-                        <option value="retirado">Retirado</option>
-                    </select>
-                </div>
-                <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)">
-            </div>
-
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="col-fecha" onclick="sortTable('fecha')">Fecha <i class="fas fa-sort"></i></th>
-                            <th class="col-nombre" onclick="sortTable('nombreCliente')">Nombre del Cliente <i class="fas fa-sort"></i></th>
-                            <th class="col-entrada" onclick="sortTable('nroEntrada')">N° de entrada <i class="fas fa-sort"></i></th>
-                            <th class="col-estado">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr class="empty-state">
-                            <td colspan="4">
-                                <i class="fas fa-inbox"></i>
-                                <p>No hay trámites registrados</p>
-                                <button class="btn btn-primary" onclick="openTramiteModal()" style="margin-top:12px;">
-                                    <i class="fas fa-plus"></i> Agregar primer trámite
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)">
 
         <!-- Página Configuración -->
         <div id="page-config" class="page">
@@ -2047,7 +2127,7 @@
             <p class="io-help">La fecha de salida pasa a ser la real.</p>
             <div class="io-choices">
                 <button type="button" class="btn btn-primary" onclick="confirmarSalioHoy()"><i class="fas fa-calendar-day"></i> Hoy</button>
-                <button type="button" class="btn" onclick="mostrarOtraFechaSalio()"><i class="fas fa-calendar-alt"></i> Otra fecha</button>
+                <button type="button" class="btn" onclick="mostrarOtraFechaSalio()"><i class="fas fa-calendar-alt"></i> Otro día</button>
             </div>
             <div id="salioOtraFechaWrap" style="display:none; margin-top:14px;">
                 <div class="form-group">
@@ -3001,7 +3081,7 @@
             const pageEl = document.getElementById(`page-${page}`);
             if (pageEl) pageEl.classList.add('active');
 
-            const titles = { home: 'Inicio', tramites: 'Trámites', config: 'Configuración' };
+            const titles = { home: 'Inicio', config: 'Configuración' };
             document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
 
             // Cerrar menú automáticamente en ordenador al seleccionar opción
@@ -3025,14 +3105,8 @@
             if (page === 'home') {
                 volverSelector();
             }
-            if (page === 'tramites') {
-                cerrarMenuTotal();
-                renderTable();
-                updateFilterOptions();
-                actualizarSelectorTramite();
-            }
             if (page === 'config') {
-                cerrarMenuTotal();
+                cerrarMenuFiltro();
                 renderConfig();
             }
         }
@@ -3046,7 +3120,8 @@
             document.getElementById('vencimientoSearchInput').value = '';
             filtroDashboard = 'total';
             filtroMesDashboard = '';
-            cerrarMenuTotal();
+            cerrarMenuFiltro();
+            actualizarBotonFiltro();
             actualizarBotonCambioModulo();
             updateStats();
             showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
@@ -3071,7 +3146,8 @@
             moduloActual = null;
             filtroDashboard = 'total';
             filtroMesDashboard = '';
-            cerrarMenuTotal();
+            cerrarMenuFiltro();
+            actualizarBotonFiltro();
             document.getElementById('moduleSelector').style.display = '';
             document.getElementById('moduleDashboard').classList.remove('is-open');
         }
@@ -3146,12 +3222,56 @@
             return true;
         }
 
-        function actualizarTarjetasFiltro() {
-            document.querySelectorAll('.stats-grid .stat-card').forEach(card => {
-                const activo = card.dataset.filter === filtroDashboard;
-                card.classList.toggle('active', activo);
-                card.setAttribute('aria-pressed', activo ? 'true' : 'false');
+        function etiquetaFiltroDashboard() {
+            const etiquetas = {
+                total: 'Todos',
+                'por-salir': 'Por salir',
+                'para-retirar': 'Para retirar',
+                pendiente: 'Pendiente'
+            };
+            return etiquetas[filtroDashboard] || 'Filtro';
+        }
+
+        function actualizarBotonFiltro() {
+            const btn = document.getElementById('btnFiltro');
+            const label = document.getElementById('filtroLabel');
+            const activo = filtroDashboard && filtroDashboard !== 'total';
+            if (label) label.textContent = activo ? etiquetaFiltroDashboard() : 'Filtro';
+            btn?.classList.toggle('is-active', !!activo);
+            document.querySelectorAll('#filtroMenu [data-filter]').forEach(item => {
+                const seleccionado = item.dataset.filter === filtroDashboard;
+                item.classList.toggle('active', seleccionado);
+                item.setAttribute('aria-checked', seleccionado ? 'true' : 'false');
             });
+        }
+
+        function abrirMenuFiltro() {
+            const menu = document.getElementById('filtroMenu');
+            const btn = document.getElementById('btnFiltro');
+            const wrap = document.getElementById('filtroWrap');
+            const caret = document.getElementById('filtroCaret');
+            menu?.classList.add('open');
+            wrap?.classList.add('menu-open');
+            btn?.setAttribute('aria-expanded', 'true');
+            caret?.classList.add('open');
+        }
+
+        function cerrarMenuFiltro() {
+            const menu = document.getElementById('filtroMenu');
+            const btn = document.getElementById('btnFiltro');
+            const wrap = document.getElementById('filtroWrap');
+            const caret = document.getElementById('filtroCaret');
+            menu?.classList.remove('open');
+            wrap?.classList.remove('menu-open');
+            btn?.setAttribute('aria-expanded', 'false');
+            caret?.classList.remove('open');
+        }
+
+        function toggleMenuFiltro(event) {
+            if (event) event.stopPropagation();
+            const menu = document.getElementById('filtroMenu');
+            if (menu?.classList.contains('open')) cerrarMenuFiltro();
+            else abrirMenuFiltro();
         }
 
         function obtenerUltimosMeses(cantidad = 3) {
@@ -3185,89 +3305,24 @@
             return obtenerUltimosMeses(3).find(m => m.key === filtroMesDashboard)?.label || '';
         }
 
-        function renderMenuTotal() {
-            const menu = document.getElementById('statTotalMenu');
-            if (!menu) return;
-            const items = [{ key: '', label: 'Todos' }, ...obtenerUltimosMeses(3)];
-            menu.innerHTML = items.map(item => {
-                const activo = (filtroMesDashboard || '') === item.key;
-                return `<button type="button" role="menuitem" class="${activo ? 'active' : ''}" onclick="seleccionarMesDashboard('${item.key}', event)">${item.label}</button>`;
-            }).join('');
-        }
-
-        function abrirMenuTotal() {
-            renderMenuTotal();
-            const menu = document.getElementById('statTotalMenu');
-            const btn = document.getElementById('statTotalBtn');
-            const wrap = document.getElementById('statTotalWrap');
-            const caret = document.getElementById('statTotalCaret');
-            menu?.classList.add('open');
-            wrap?.classList.add('menu-open');
-            btn?.setAttribute('aria-expanded', 'true');
-            caret?.classList.add('open');
-        }
-
-        function cerrarMenuTotal() {
-            const menu = document.getElementById('statTotalMenu');
-            const btn = document.getElementById('statTotalBtn');
-            const wrap = document.getElementById('statTotalWrap');
-            const caret = document.getElementById('statTotalCaret');
-            menu?.classList.remove('open');
-            wrap?.classList.remove('menu-open');
-            btn?.setAttribute('aria-expanded', 'false');
-            caret?.classList.remove('open');
-        }
-
-        function toggleMenuTotal() {
-            const menu = document.getElementById('statTotalMenu');
-            if (menu?.classList.contains('open')) {
-                cerrarMenuTotal();
-            } else {
-                abrirMenuTotal();
-            }
-        }
-
-        function seleccionarMesDashboard(mesKey, event) {
-            if (event) event.stopPropagation();
-            filtroMesDashboard = mesKey || '';
-            filtroDashboard = 'total';
-            cerrarMenuTotal();
-            actualizarTarjetasFiltro();
-            renderVencimientos();
-        }
-
         function filtrarDashboard(filtro, event) {
             if (event) event.stopPropagation();
-            if (filtro === 'total') {
-                filtroDashboard = 'total';
-                actualizarTarjetasFiltro();
-                renderVencimientos();
-                toggleMenuTotal();
-                return;
-            }
-            cerrarMenuTotal();
             filtroDashboard = filtro || 'total';
-            actualizarTarjetasFiltro();
+            cerrarMenuFiltro();
+            actualizarBotonFiltro();
             renderVencimientos();
         }
 
         document.addEventListener('click', (e) => {
-            const wrap = document.getElementById('statTotalWrap');
-            if (wrap && !wrap.contains(e.target)) cerrarMenuTotal();
+            const wrap = document.getElementById('filtroWrap');
+            if (wrap && !wrap.contains(e.target)) cerrarMenuFiltro();
         });
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') cerrarMenuTotal();
+            if (e.key === 'Escape') cerrarMenuFiltro();
         });
 
         function updateStats() {
-            const tramites = getData().filter(t => t.modulo === moduloActual);
-
-            document.getElementById('statTotal').textContent = tramites.length;
-            document.getElementById('statPorSalir').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'por-salir')).length;
-            document.getElementById('statParaRetirar').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'para-retirar')).length;
-            document.getElementById('statPendiente').textContent = tramites.filter(t => coincideFiltroDashboard(t, 'pendiente')).length;
-
-            actualizarTarjetasFiltro();
+            actualizarBotonFiltro();
             renderVencimientos();
         }
 
@@ -3357,6 +3412,9 @@
                        </div>`
                     : `<div class="vencimiento-fecha" aria-label="Sin fecha de presentación"><span class="dia">—</span></div>`;
 
+                const retiradoChecked = (t.retirado || t.salidaReal) ? 'checked' : '';
+                const fechaRetiro = t.salidaReal ? formatearFechaVisual(t.salidaReal) : '';
+
                 return `
                             <div>
                                 <div class="vencimiento-item" onclick="toggleVencimientoDetalle('${t.id}')">
@@ -3370,6 +3428,14 @@
                                     </div>
                                 </div>
                                 <div class="vencimiento-detalle-expandido ${isExpanded ? 'mostrar' : ''}" id="vencimiento-detalle-${t.id}">
+                                    <div class="vencimiento-acciones">
+                                        <button type="button" class="vencimiento-accion" title="Editar" aria-label="Editar trámite" onclick="openTramiteModal('${t.id}')">
+                                            <i class="fas fa-pen" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" class="vencimiento-accion" title="Borrar" aria-label="Borrar trámite" onclick="deleteTramite('${t.id}')">
+                                            <i class="fas fa-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                     <div class="detalle-row">
                                         <span class="detalle-label">Número de expediente:</span>
                                         <span class="detalle-valor-bold">${t.nroEntrada || 'No registrado'}</span>
@@ -3379,8 +3445,15 @@
                                         <span>${t.para || 'Sin asignar'}</span>
                                     </div>
                                     <div class="detalle-row">
-                                        <span class="detalle-label">${t.salidaReal ? 'Fecha de salida real:' : 'Fecha de salida estimada:'}</span>
-                                        <span>${formatearFechaVisual(t.salidaReal || t.salida)}</span>
+                                        <span class="detalle-label">Fecha de Salida Estimada:</span>
+                                        <span>${formatearFechaVisual(t.salida)}</span>
+                                    </div>
+                                    <div class="detalle-row detalle-row-retirado">
+                                        <span class="detalle-label">Retirado</span>
+                                        <label class="retirado-casillero">
+                                            <input type="checkbox" ${retiradoChecked} aria-label="Retirado" onchange="onMarcarSalio('${t.id}', this)">
+                                            ${fechaRetiro ? `<span class="retirado-fecha">${fechaRetiro}</span>` : ''}
+                                        </label>
                                     </div>
                                 </div>
                             </div>`;
@@ -3464,8 +3537,12 @@
         }
 
         function renderTable() {
-            const tramites = getFilteredTramites();
+            if (moduloActual && document.getElementById('vencimientosList')) {
+                renderVencimientos();
+            }
             const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+            const tramites = getFilteredTramites();
 
             // Función auxiliar para formatear fecha a DD MMM YYYY (solo visual)
             function formatearFechaVisual(fechaStr) {
@@ -3565,7 +3642,13 @@
         }
 
         function mostrarOtraFechaSalio() {
-            document.getElementById('salioOtraFechaWrap').style.display = 'block';
+            const wrap = document.getElementById('salioOtraFechaWrap');
+            wrap.style.display = 'block';
+            const input = document.getElementById('salioFechaInput');
+            input.focus();
+            if (typeof input.showPicker === 'function') {
+                try { input.showPicker(); } catch (e) { /* el navegador abre el calendario al tocar el campo */ }
+            }
         }
 
         function confirmarSalioHoy() {
@@ -3635,9 +3718,10 @@
         }
 
         function updateFilterOptions() {
+            const filterTramite = document.getElementById('filterTramite');
+            if (!filterTramite) return;
             const tramites = getData().filter(t => t.modulo === moduloFiltro);
 
-            const filterTramite = document.getElementById('filterTramite');
             filterTramite.innerHTML = '<option value="">Todos los trámites</option>' +
                 [...new Set(tramites.map(t => t.tramite))].sort().map(t => `<option value="${t}">${t}</option>`).join('');
 
@@ -3937,6 +4021,7 @@
 
         async function deleteTramite(id) {
             if (!confirm('¿Está seguro de eliminar este trámite? Esta acción no se puede deshacer.')) return;
+            if (vencimientoExpandido === id) vencimientoExpandido = null;
 
             try {
                 const tramites = getData().filter(t => t.id !== id);
