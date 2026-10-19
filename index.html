@@ -1524,6 +1524,14 @@
             font-weight: 500;
             color: var(--text-secondary);
         }
+        .fecha-compacta {
+            display: contents;
+        }
+        .fecha-larga,
+        .vencimiento-expediente,
+        .vencimiento-encabezado {
+            display: none;
+        }
         .vencimiento-item .vencimiento-info {
             display: flex;
             flex-direction: column;
@@ -1644,6 +1652,73 @@
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
+        }
+        @media (min-width: 769px) {
+            .vencimiento-encabezado,
+            .vencimiento-item {
+                display: grid;
+                grid-template-columns: 13.5rem minmax(11rem, 22rem) minmax(9rem, 1fr) 8.25rem;
+                column-gap: 24px;
+                align-items: center;
+            }
+            .vencimiento-encabezado {
+                padding: 2px 12px 8px;
+                margin-bottom: 2px;
+                border-bottom: 1px solid var(--border);
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--text-secondary);
+            }
+            .vencimiento-encabezado span:last-child,
+            .vencimiento-estado {
+                text-align: right;
+            }
+            .vencimiento-item {
+                padding: 12px;
+                margin: 0;
+            }
+            .vencimiento-item:hover {
+                margin: 0;
+                padding: 12px;
+            }
+            .vencimiento-fecha {
+                width: auto;
+                align-items: flex-start;
+            }
+            .fecha-compacta {
+                display: none;
+            }
+            .fecha-larga {
+                display: block;
+                font-size: 0.92rem;
+                font-weight: 600;
+                color: var(--text-primary);
+                white-space: nowrap;
+                letter-spacing: 0.01em;
+            }
+            .vencimiento-info .nombre,
+            .vencimiento-info .detalle {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .vencimiento-expediente {
+                display: block;
+                min-width: 0;
+                font-size: 0.95rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.02em;
+                color: var(--text-primary);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .vencimiento-estado {
+                margin-left: 0;
+            }
         }
         @media (max-width: 768px) {
             .sidebar {
@@ -3491,25 +3566,38 @@
                     const fecha = new Date(fechaStr + 'T00:00:00');
                     if (isNaN(fecha.getTime())) return null;
                     const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                     return {
                         dia: String(fecha.getDate()).padStart(2, '0'),
                         mes: meses[fecha.getMonth()],
-                        anio: String(fecha.getFullYear())
+                        anio: String(fecha.getFullYear()),
+                        larga: `${dias[fecha.getDay()]} ${fecha.getDate()} ${meses[fecha.getMonth()]} ${fecha.getFullYear()}`
                     };
                 } catch {
                     return null;
                 }
             }
 
-            vencimientosList.innerHTML = tramitesFiltrados.map(t => {
+            const encabezado = `
+                            <div class="vencimiento-encabezado" aria-hidden="true">
+                                <span>Fecha</span>
+                                <span>Trámite</span>
+                                <span>N° de expediente</span>
+                                <span>Estado</span>
+                            </div>`;
+
+            vencimientosList.innerHTML = encabezado + tramitesFiltrados.map(t => {
                 const estado = getEstadoBadge(t);
                 const isExpanded = vencimientoExpandido === t.id;
                 const fechaPartes = partesFecha(t.fecha);
                 const fechaHtml = fechaPartes
-                    ? `<div class="vencimiento-fecha" aria-label="Fecha de presentación ${fechaPartes.dia} ${fechaPartes.mes} ${fechaPartes.anio}">
-                            <span class="dia">${fechaPartes.dia}</span>
-                            <span class="mes">${fechaPartes.mes}</span>
-                            <span class="anio">${fechaPartes.anio}</span>
+                    ? `<div class="vencimiento-fecha" aria-label="Fecha de presentación ${fechaPartes.larga}">
+                            <span class="fecha-compacta">
+                                <span class="dia">${fechaPartes.dia}</span>
+                                <span class="mes">${fechaPartes.mes}</span>
+                                <span class="anio">${fechaPartes.anio}</span>
+                            </span>
+                            <span class="fecha-larga">${fechaPartes.larga}</span>
                        </div>`
                     : `<div class="vencimiento-fecha" aria-label="Sin fecha de presentación"><span class="dia">—</span></div>`;
 
@@ -3524,6 +3612,7 @@
                                         <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
                                         <span class="detalle">${t.tramite || 'Sin tipo'}</span>
                                     </div>
+                                    <div class="vencimiento-expediente">${t.nroEntrada || '—'}</div>
                                     <div class="vencimiento-estado">
                                         <span class="status-badge ${estado.class}">${estado.text}</span>
                                     </div>
