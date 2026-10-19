@@ -5,7 +5,7 @@
  * Las peticiones a Supabase pasan directo (la app gestiona la cola offline).
  */
 
-const CACHE_VERSION = 'gestoria-pwa-v8';
+const CACHE_VERSION = 'gestoria-pwa-v9';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const STATIC_ASSETS = [
@@ -47,9 +47,8 @@ async function cacheStaticAssets() {
 }
 
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        cacheStaticAssets().then(() => self.skipWaiting())
-    );
+    event.waitUntil(self.skipWaiting());
+    cacheStaticAssets();
 });
 
 self.addEventListener('activate', (event) => {
@@ -63,6 +62,25 @@ self.addEventListener('activate', (event) => {
         ).then(() => self.clients.claim())
     );
 });
+
+async function networkFirst(request) {
+    const cache = await caches.open(STATIC_CACHE);
+    try {
+        const response = await fetch(request);
+        if (response && response.ok) {
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (err) {
+        const cached = await cache.match(request)
+            || await cache.match(new URL('./index.html', self.location.href).href);
+        if (cached) return cached;
+        return new Response('Sin conexión y recurso no disponible en caché.', {
+            status: 503,
+            statusText: 'Offline'
+        });
+    }
+}
 
 /**
  * Stale-While-Revalidate: responde desde caché al instante y actualiza en segundo plano.
@@ -107,9 +125,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    if (request.method === 'GET') {
-        event.respondWith(staleWhileRevalidate(request));
-    }
+    if (request.method !== 'GET') return;
+
+    const isAppShell = request.mode === 'navigate'
+        || url.pathname.endsWith('/index.html')
+        || url.pathname.endsWith('/');
+
+    event.respondWith(isAppShell ? networkFirst(request) : staleWhileRevalidate(request));
 });
 
 self.addEventListener('message', (event) => {

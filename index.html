@@ -2379,18 +2379,36 @@
         function registerServiceWorker() {
             if (!('serviceWorker' in navigator)) return;
 
+            let pendingReload = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!pendingReload) return;
+                window.location.reload();
+            });
+
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                navigator.serviceWorker.register('./sw.js', { scope: './', updateViaCache: 'none' })
                     .then((registration) => {
+                        const activarNuevaVersion = () => {
+                            const worker = registration.waiting;
+                            if (!worker || !navigator.serviceWorker.controller) return;
+                            pendingReload = true;
+                            worker.postMessage({ type: 'SKIP_WAITING' });
+                        };
+
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    showToast('Nueva versión disponible. Recargue la página para actualizar.', 'info');
-                                }
+                                if (newWorker.state === 'installed') activarNuevaVersion();
                             });
                         });
+
+                        document.addEventListener('visibilitychange', () => {
+                            if (!document.hidden) registration.update();
+                        });
+
+                        activarNuevaVersion();
+                        registration.update();
                     })
                     .catch((err) => console.warn('Service Worker no registrado:', err));
             });
