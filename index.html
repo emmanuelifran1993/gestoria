@@ -520,9 +520,6 @@
             flex-wrap: wrap;
             align-items: center;
         }
-        .btn-nuevo-tramite {
-            flex-shrink: 0;
-        }
         .salida-tag {
             display: inline-block;
             margin-left: 6px;
@@ -1277,16 +1274,33 @@
         .module-tabs {
             display: none;
         }
-        .modulo-acciones {
+        .tramites-heading {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .tramites-heading h3 {
+            margin: 0;
+            min-width: 0;
         }
         .filtro-wrap {
             position: relative;
             z-index: 5;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+        .btn.btn-filtro {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            padding: 0;
+            justify-content: center;
+            border-radius: 10px;
+        }
+        .btn.btn-filtro:hover {
+            transform: none;
         }
         .filtro-wrap.menu-open {
             z-index: 40;
@@ -1310,7 +1324,8 @@
             display: none;
             position: absolute;
             top: calc(100% + 6px);
-            left: 0;
+            right: 0;
+            left: auto;
             min-width: 210px;
             background: var(--card-bg);
             border: 1px solid var(--border);
@@ -1392,6 +1407,42 @@
         .btn-tramite-plus:focus-visible {
             outline: 2px solid var(--accent);
             outline-offset: 2px;
+        }
+        .fab-nuevo-tramite {
+            display: none;
+            position: fixed;
+            right: 20px;
+            bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+            z-index: 900;
+            width: 56px;
+            height: 56px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-size: 1.35rem;
+            line-height: 1;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(44, 62, 80, 0.28);
+            transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+        }
+        #moduleDashboard.is-open ~ .fab-nuevo-tramite {
+            display: flex;
+        }
+        .fab-nuevo-tramite:hover {
+            background: var(--button-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(44, 62, 80, 0.34);
+        }
+        .fab-nuevo-tramite:active {
+            transform: scale(0.96);
+        }
+        .fab-nuevo-tramite:focus-visible {
+            outline: 3px solid var(--accent-light);
+            outline-offset: 3px;
         }
         .config-list {
             list-style: none;
@@ -1825,13 +1876,14 @@
                 min-height: 0;
                 overflow: hidden;
             }
-            #moduleDashboard.is-open > .modulo-acciones,
-            #moduleDashboard.is-open > .module-header {
+            #moduleDashboard.is-open > .module-header,
+            #moduleDashboard.is-open .tramites-heading,
+            #moduleDashboard.is-open .vencimiento-buscador {
                 flex-shrink: 0;
             }
             .module-header {
                 display: block;
-                margin: 0 -12px 12px;
+                margin: 0 -12px 16px;
             }
             .module-header #moduleTitle,
             .module-header #btnCambiarModulo {
@@ -1874,8 +1926,9 @@
                 min-height: 0;
                 display: flex;
                 flex-direction: column;
+                margin-top: 0;
                 margin-bottom: 0;
-                padding: 16px;
+                padding: 16px 16px 12px;
             }
             #moduleDashboard.is-open .config-section h3,
             #moduleDashboard.is-open .vencimiento-buscador {
@@ -1885,6 +1938,7 @@
                 flex: 1;
                 min-height: 0;
                 max-height: none;
+                padding-bottom: 72px;
             }
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -1974,10 +2028,9 @@
             .vencimiento-fecha {
                 width: 42px;
             }
-            .btn-nuevo-tramite {
-                margin-left: 0;
-                width: 100%;
-                justify-content: center;
+            .fab-nuevo-tramite {
+                right: 16px;
+                bottom: calc(16px + env(safe-area-inset-bottom, 0px));
             }
             #page-tramites thead th {
                 font-size: 0.68rem;
@@ -2011,6 +2064,12 @@
             .btn {
                 padding: 8px 12px;
                 font-size: 0.8rem;
+            }
+            .btn.btn-filtro {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                padding: 0;
             }
         }
 
@@ -2130,38 +2189,32 @@
                     </div>
                 </div>
 
-                <div class="modulo-acciones">
-                    <button type="button" class="btn btn-primary" onclick="nuevoTramiteDesdeModulo()">
-                        <i class="fas fa-plus"></i> Nuevo Trámite
-                    </button>
-                    <div class="filtro-wrap" id="filtroWrap">
-                        <button type="button" class="btn btn-filtro" id="btnFiltro" onclick="toggleMenuFiltro(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="filtroMenu">
-                            <i class="fas fa-filter"></i>
-                            <span id="filtroLabel">Filtro</span>
-                            <i class="fas fa-chevron-down filtro-caret" id="filtroCaret"></i>
-                        </button>
-                        <div class="filtro-menu" id="filtroMenu" role="menu" aria-label="Filtrar trámites">
-                            <button type="button" role="menuitemradio" data-filter="total" aria-checked="true" onclick="filtrarDashboard('total', event)">
-                                <i class="fas fa-list"></i> Todos
+                <div class="config-section">
+                    <div class="tramites-heading">
+                        <h3>
+                            <i class="fas fa-chart-simple"></i>
+                            Trámites
+                        </h3>
+                        <div class="filtro-wrap" id="filtroWrap">
+                            <button type="button" class="btn btn-filtro" id="btnFiltro" onclick="toggleMenuFiltro(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="filtroMenu" aria-label="Filtrar trámites" title="Filtrar">
+                                <i class="fas fa-filter" aria-hidden="true"></i>
                             </button>
-                            <button type="button" role="menuitemradio" data-filter="por-salir" aria-checked="false" onclick="filtrarDashboard('por-salir', event)">
-                                <i class="fas fa-clock"></i> Por salir
-                            </button>
-                            <button type="button" role="menuitemradio" data-filter="para-retirar" aria-checked="false" onclick="filtrarDashboard('para-retirar', event)">
-                                <i class="fas fa-box-open"></i> Para retirar
-                            </button>
-                            <button type="button" role="menuitemradio" data-filter="pendiente" aria-checked="false" onclick="filtrarDashboard('pendiente', event)">
-                                <i class="fas fa-hourglass-half"></i> Pendiente
-                            </button>
+                            <div class="filtro-menu" id="filtroMenu" role="menu" aria-label="Filtrar trámites">
+                                <button type="button" role="menuitemradio" data-filter="total" aria-checked="true" onclick="filtrarDashboard('total', event)">
+                                    <i class="fas fa-list"></i> Todos
+                                </button>
+                                <button type="button" role="menuitemradio" data-filter="por-salir" aria-checked="false" onclick="filtrarDashboard('por-salir', event)">
+                                    <i class="fas fa-clock"></i> Por salir
+                                </button>
+                                <button type="button" role="menuitemradio" data-filter="para-retirar" aria-checked="false" onclick="filtrarDashboard('para-retirar', event)">
+                                    <i class="fas fa-box-open"></i> Para retirar
+                                </button>
+                                <button type="button" role="menuitemradio" data-filter="pendiente" aria-checked="false" onclick="filtrarDashboard('pendiente', event)">
+                                    <i class="fas fa-hourglass-half"></i> Pendiente
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="config-section">
-                    <h3>
-                        <i class="fas fa-chart-simple"></i>
-                        Trámites
-                    </h3>
                     <div class="vencimiento-buscador">
                         <input type="text" id="vencimientoSearchInput" placeholder="Buscar por nombre o número de expediente..." oninput="renderVencimientos()">
                     </div>
@@ -2170,6 +2223,9 @@
                     </div>
                 </div>
             </div>
+            <button type="button" class="fab-nuevo-tramite" id="fabNuevoTramite" onclick="nuevoTramiteDesdeModulo()" aria-label="Nuevo trámite">
+                <i class="fas fa-plus" aria-hidden="true"></i>
+            </button>
         </div>
 
         <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)">
@@ -3561,10 +3617,13 @@
 
         function actualizarBotonFiltro() {
             const btn = document.getElementById('btnFiltro');
-            const label = document.getElementById('filtroLabel');
             const activo = filtroDashboard && filtroDashboard !== 'total';
-            if (label) label.textContent = activo ? etiquetaFiltroDashboard() : 'Filtro';
-            btn?.classList.toggle('is-active', !!activo);
+            const etiqueta = activo ? etiquetaFiltroDashboard() : 'Filtrar trámites';
+            if (btn) {
+                btn.classList.toggle('is-active', !!activo);
+                btn.setAttribute('aria-label', activo ? `Filtro: ${etiqueta}` : 'Filtrar trámites');
+                btn.title = activo ? etiqueta : 'Filtrar';
+            }
             document.querySelectorAll('#filtroMenu [data-filter]').forEach(item => {
                 const seleccionado = item.dataset.filter === filtroDashboard;
                 item.classList.toggle('active', seleccionado);
