@@ -1650,6 +1650,22 @@
             flex-shrink: 0;
             margin-left: auto;
         }
+        .falta-expediente {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.05rem;
+            height: 1.05rem;
+            color: #a6843d;
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0;
+            flex-shrink: 0;
+        }
+        body.dark-mode .falta-expediente {
+            color: #d7bf86;
+        }
         .vencimiento-detalle-expandido .detalle-valor-bold {
             font-weight: 700;
             color: var(--text-primary);
@@ -1938,7 +1954,7 @@
                 flex: 1;
                 min-height: 0;
                 max-height: none;
-                padding-bottom: 72px;
+                padding-bottom: 132px;
             }
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
@@ -2030,7 +2046,14 @@
             }
             .fab-nuevo-tramite {
                 right: 16px;
-                bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+                bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+            }
+            .vencimiento-expediente.sin-numero {
+                display: flex;
+                align-items: center;
+                width: auto;
+                flex: 0 0 auto;
+                margin-right: 8px;
             }
             #page-tramites thead th {
                 font-size: 0.68rem;
@@ -3818,6 +3841,10 @@
                 const tipoClase = esUrgente ? 'tu' : 'tc';
                 const tipoCorto = esUrgente ? 'T.U' : 'T.C';
                 const tipoLargo = esUrgente ? 'Trámite Urgente' : 'Trámite Común';
+                const sinExpediente = !String(t.nroEntrada || '').trim();
+                const marcaFaltaExpediente = sinExpediente
+                    ? `<span class="falta-expediente" title="Falta el número de expediente" aria-label="Falta el número de expediente">!</span>`
+                    : '';
 
                 return `
                             <div>
@@ -3827,7 +3854,7 @@
                                         <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
                                         <span class="detalle">${t.tramite || 'Sin tipo'}</span>
                                     </div>
-                                    <div class="vencimiento-expediente">${t.nroEntrada || '—'}</div>
+                                    <div class="vencimiento-expediente${sinExpediente ? ' sin-numero' : ''}">${sinExpediente ? marcaFaltaExpediente : t.nroEntrada}</div>
                                     <div class="vencimiento-tipo ${tipoClase}" aria-label="${tipoLargo}">${tipoCorto}</div>
                                     <div class="vencimiento-estado">
                                         <span class="status-badge ${estado.class}">${estado.text}</span>
