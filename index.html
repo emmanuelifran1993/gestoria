@@ -996,6 +996,9 @@
             color: var(--danger);
             margin-left: 2px;
         }
+        #tramiteNroEntrada {
+            font-size: 16px;
+        }
         .field-hint {
             color: var(--text-secondary);
             display: block;
@@ -1529,8 +1532,36 @@
         }
         .fecha-larga,
         .vencimiento-expediente,
+        .vencimiento-tipo,
         .vencimiento-encabezado {
             display: none;
+        }
+        .detalle-tipo-celular .tipo-leyenda,
+        .vencimiento-tipo {
+            font-weight: 800;
+            letter-spacing: 0.03em;
+        }
+        .tipo-leyenda.tc,
+        .vencimiento-tipo.tc {
+            color: #0d5c2e;
+        }
+        .tipo-leyenda.tu,
+        .vencimiento-tipo.tu {
+            color: #8b1515;
+        }
+        body.dark-mode .tipo-leyenda.tc,
+        body.dark-mode .vencimiento-tipo.tc {
+            color: #3dbe6e;
+        }
+        body.dark-mode .tipo-leyenda.tu,
+        body.dark-mode .vencimiento-tipo.tu {
+            color: #f07171;
+        }
+        .detalle-tipo-celular {
+            padding-top: 2px;
+        }
+        .detalle-tipo-celular .tipo-leyenda {
+            font-size: 0.95rem;
         }
         .vencimiento-item .vencimiento-info {
             display: flex;
@@ -1657,7 +1688,7 @@
             .vencimiento-encabezado,
             .vencimiento-item {
                 display: grid;
-                grid-template-columns: 13.5rem minmax(11rem, 22rem) minmax(9rem, 1fr) 8.25rem;
+                grid-template-columns: 13.5rem minmax(8.5rem, 16rem) minmax(6.5rem, 1fr) 6.5rem 8.25rem;
                 column-gap: 24px;
                 align-items: center;
             }
@@ -1715,6 +1746,14 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+            }
+            .vencimiento-tipo {
+                display: block;
+                font-size: 0.95rem;
+                white-space: nowrap;
+            }
+            .vencimiento-detalle-expandido .detalle-tipo-celular {
+                display: none;
             }
             .vencimiento-estado {
                 margin-left: 0;
@@ -1823,6 +1862,42 @@
                 border-radius: 16px 16px 0 0;
                 max-height: 90vh;
                 margin-top: auto;
+            }
+            #tramiteModalOverlay .modal {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                max-height: 92dvh;
+                padding-bottom: 0;
+            }
+            #tramiteModalOverlay .modal-header,
+            #tramiteModalOverlay .modal-tabs {
+                flex-shrink: 0;
+            }
+            #tramiteModalOverlay .tramite-form {
+                display: flex;
+                flex-direction: column;
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: hidden;
+            }
+            #tramiteModalOverlay .tramite-form-scroll {
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                padding-bottom: 8px;
+            }
+            #tramiteModalOverlay .form-actions {
+                flex-shrink: 0;
+                margin-top: 0;
+                margin-left: -20px;
+                margin-right: -20px;
+                padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+                background: var(--bg-secondary);
+                border-top: 1px solid var(--border);
+                box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.06);
             }
             .modal-overlay {
                 align-items: flex-end;
@@ -2091,6 +2166,7 @@
                 <button data-modulo="catastro" onclick="cambiarModalModulo('catastro')"><i class="fas fa-map"></i> Catastro</button>
             </div>
             <form id="tramiteForm" class="tramite-form" onsubmit="saveTramite(event)">
+                <div class="tramite-form-scroll">
                 <input type="hidden" id="tramiteId">
                 <input type="hidden" id="tramiteModulo" value="rpi">
                 <input type="hidden" id="tramiteUrgencia" value="">
@@ -2113,7 +2189,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>N° de Entrada / Expediente</label>
-                        <input type="text" id="tramiteNroEntrada" placeholder="Número" inputmode="text" autocomplete="off">
+                        <input type="text" id="tramiteNroEntrada" placeholder="Número" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" oninput="soloDigitosEntrada(this)">
                     </div>
                     <div class="form-group">
                         <label>Para <span class="req">*</span></label>
@@ -2164,6 +2240,7 @@
                         <button type="button" class="btn btn-sm btn-danger" id="removePhotoBtn" onclick="removePhoto()"><i class="fas fa-trash"></i> Quitar</button>
                     </div>
                     <input type="hidden" id="tramiteFotoData">
+                </div>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn" onclick="closeTramiteModal()">Cancelar</button>
@@ -3583,6 +3660,7 @@
                                 <span>Fecha</span>
                                 <span>Trámite</span>
                                 <span>N° de expediente</span>
+                                <span>T.C/ T.U</span>
                                 <span>Estado</span>
                             </div>`;
 
@@ -3603,6 +3681,10 @@
 
                 const retiradoChecked = (t.retirado || t.salidaReal) ? 'checked' : '';
                 const fechaRetiro = t.salidaReal ? formatearFechaVisual(t.salidaReal) : '';
+                const esUrgente = t.urgencia === 'Urgente';
+                const tipoClase = esUrgente ? 'tu' : 'tc';
+                const tipoCorto = esUrgente ? 'T.U' : 'T.C';
+                const tipoLargo = esUrgente ? 'Trámite Urgente' : 'Trámite Común';
 
                 return `
                             <div>
@@ -3613,6 +3695,7 @@
                                         <span class="detalle">${t.tramite || 'Sin tipo'}</span>
                                     </div>
                                     <div class="vencimiento-expediente">${t.nroEntrada || '—'}</div>
+                                    <div class="vencimiento-tipo ${tipoClase}" aria-label="${tipoLargo}">${tipoCorto}</div>
                                     <div class="vencimiento-estado">
                                         <span class="status-badge ${estado.class}">${estado.text}</span>
                                     </div>
@@ -3633,6 +3716,9 @@
                                     <div class="detalle-row">
                                         <span class="detalle-label">Escribano:</span>
                                         <span>${t.para || 'Sin asignar'}</span>
+                                    </div>
+                                    <div class="detalle-row detalle-tipo-celular">
+                                        <span class="tipo-leyenda ${tipoClase}">${tipoLargo}</span>
                                     </div>
                                     <div class="detalle-row">
                                         <span class="detalle-label">Fecha de Salida Estimada:</span>
@@ -3991,11 +4077,34 @@
             openTramiteModal(null, moduloActual || 'rpi');
         }
 
+        function soloDigitosEntrada(input) {
+            const digitos = String(input.value || '').replace(/\D/g, '');
+            if (input.value === digitos) return;
+            const pos = input.selectionStart || 0;
+            const antes = String(input.value).slice(0, pos).replace(/\D/g, '').length;
+            input.value = digitos;
+            if (typeof input.setSelectionRange === 'function') {
+                input.setSelectionRange(antes, antes);
+            }
+        }
+
+        function enfocarNroEntrada() {
+            const input = document.getElementById('tramiteNroEntrada');
+            if (!input) return;
+            const scroll = input.closest('.tramite-form-scroll');
+            if (scroll) {
+                const delta = input.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 16;
+                scroll.scrollTop += delta;
+            }
+            input.focus();
+        }
+
         function openTramiteModal(id = null, moduloForzado = null) {
             editingTramiteId = id;
             const modal = document.getElementById('tramiteModalOverlay');
             const title = document.getElementById('tramiteModalTitle');
             const form = document.getElementById('tramiteForm');
+            let enfocarEntradaVacia = false;
 
             form.reset();
             document.getElementById('tramiteId').value = '';
@@ -4030,7 +4139,9 @@
                     document.getElementById('tramiteModulo').value = tramite.modulo || 'rpi';
                     document.getElementById('tramiteFecha').value = tramite.fecha || '';
                     document.getElementById('tramiteNombreCliente').value = tramite.nombreCliente || '';
-                    document.getElementById('tramiteNroEntrada').value = tramite.nroEntrada || '';
+                    const nroEntrada = String(tramite.nroEntrada || '').replace(/\D/g, '');
+                    document.getElementById('tramiteNroEntrada').value = nroEntrada;
+                    enfocarEntradaVacia = nroEntrada === '';
                     setUrgencia(tramite.urgencia || 'Común');
                     document.getElementById('tramitePara').value = tramite.para || '';
                     document.getElementById('tramiteSalida').value = tramite.salida || '';
@@ -4059,10 +4170,13 @@
             }
 
             modal.classList.add('active');
+            if (enfocarEntradaVacia) enfocarNroEntrada();
         }
 
         function closeTramiteModal() {
-            document.getElementById('tramiteModalOverlay').classList.remove('active');
+            const modal = document.getElementById('tramiteModalOverlay');
+            if (modal.contains(document.activeElement)) document.activeElement.blur();
+            modal.classList.remove('active');
             editingTramiteId = null;
         }
 
@@ -4078,6 +4192,9 @@
                 opciones.map(t => `<option value="${t.nombre}">${t.nombre}</option>`).join('');
             if (seleccionado && opciones.some(t => t.nombre === seleccionado)) {
                 tipoSelect.value = seleccionado;
+            } else if (!editingTramiteId && opciones.length === 1) {
+                tipoSelect.value = opciones[0].nombre;
+                calcularSalida();
             }
         }
 
@@ -4166,7 +4283,7 @@
                 fecha: document.getElementById('tramiteFecha').value,
                 tramite: document.getElementById('tramiteTipo').value,
                 nombreCliente: document.getElementById('tramiteNombreCliente').value,
-                nroEntrada: document.getElementById('tramiteNroEntrada').value,
+                nroEntrada: String(document.getElementById('tramiteNroEntrada').value || '').replace(/\D/g, ''),
                 urgencia: document.getElementById('tramiteUrgencia').value,
                 para: document.getElementById('tramitePara').value,
                 salida: document.getElementById('tramiteSalida').value,
