@@ -237,6 +237,9 @@
             font-weight: 700;
             letter-spacing: -0.5px;
         }
+        .page-title:empty {
+            display: none;
+        }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1259,6 +1262,21 @@
         .page.active { display: block; }
         #moduleDashboard { display: none; }
         #moduleDashboard.is-open { display: block; }
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .module-header h2 {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        .module-tabs {
+            display: none;
+        }
         .modulo-acciones {
             display: flex;
             align-items: center;
@@ -1808,8 +1826,48 @@
                 overflow: hidden;
             }
             #moduleDashboard.is-open > .modulo-acciones,
-            #moduleDashboard.is-open > div:first-child {
+            #moduleDashboard.is-open > .module-header {
                 flex-shrink: 0;
+            }
+            .module-header {
+                display: block;
+                margin: 0 -12px 12px;
+            }
+            .module-header #moduleTitle,
+            .module-header #btnCambiarModulo {
+                display: none;
+            }
+            .module-tabs {
+                display: flex;
+                width: 100%;
+                background: var(--bg-secondary);
+                border-bottom: 2px solid var(--border);
+            }
+            .module-tab {
+                flex: 1;
+                border: none;
+                background: transparent;
+                color: var(--text-secondary);
+                font-family: inherit;
+                font-weight: 700;
+                font-size: 1rem;
+                padding: 14px 8px;
+                cursor: pointer;
+                border-bottom: 3px solid transparent;
+                margin-bottom: -2px;
+            }
+            .module-tab i {
+                margin-right: 6px;
+            }
+            .module-tab[data-modulo="rpi"].active {
+                color: var(--rpi-color);
+                border-bottom-color: var(--rpi-color);
+                background: rgba(91, 127, 149, 0.1);
+            }
+            .module-tab[data-modulo="catastro"].active {
+                color: var(--catastro-color);
+                border-bottom-color: var(--catastro-color);
+                background: rgba(142, 68, 173, 0.1);
             }
             #moduleDashboard.is-open .config-section {
                 flex: 1;
@@ -2036,7 +2094,7 @@
             <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">
                 <i class="fas fa-bars"></i>
             </button>
-            <h1 class="page-title" id="pageTitle">Inicio</h1>
+            <h1 class="page-title" id="pageTitle"></h1>
         </div>
 
         <!-- Página Inicio -->
@@ -2057,11 +2115,19 @@
             </div>
 
             <div id="moduleDashboard">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-                    <h2 id="moduleTitle" style="font-size:1.5rem;">RPI</h2>
+                <div class="module-header">
+                    <h2 id="moduleTitle">RPI</h2>
                     <button class="btn btn-switch-modulo btn-catastro" id="btnCambiarModulo" onclick="cambiarAOtroModulo()">
                         <i class="fas fa-map"></i> Cambiar a Catastro
                     </button>
+                    <div class="module-tabs" id="moduleTabs" role="tablist" aria-label="Módulo">
+                        <button type="button" class="module-tab active" role="tab" data-modulo="rpi" aria-selected="true" onclick="seleccionarModulo('rpi')">
+                            <i class="fas fa-building"></i> RPI
+                        </button>
+                        <button type="button" class="module-tab" role="tab" data-modulo="catastro" aria-selected="false" onclick="seleccionarModulo('catastro')">
+                            <i class="fas fa-map"></i> Catastro
+                        </button>
+                    </div>
                 </div>
 
                 <div class="modulo-acciones">
@@ -3334,8 +3400,8 @@
             const pageEl = document.getElementById(`page-${page}`);
             if (pageEl) pageEl.classList.add('active');
 
-            const titles = { home: 'Inicio', config: 'Configuración' };
-            document.getElementById('pageTitle').textContent = titles[page] || 'Inicio';
+            const titles = { home: '', config: 'Configuración' };
+            document.getElementById('pageTitle').textContent = titles[page] ?? '';
 
             // Cerrar menú automáticamente en ordenador al seleccionar opción
             if (window.innerWidth > 768) {
@@ -3366,6 +3432,9 @@
 
         // 5.2 Selección de módulo
         function seleccionarModulo(modulo) {
+            if (moduloActual === modulo && document.getElementById('moduleDashboard').classList.contains('is-open')) {
+                return;
+            }
             moduloActual = modulo;
             document.getElementById('moduleSelector').style.display = 'none';
             document.getElementById('moduleDashboard').classList.add('is-open');
@@ -3388,6 +3457,11 @@
             const icono = destino === 'rpi' ? 'fa-building' : 'fa-map';
             btn.className = `btn btn-switch-modulo btn-${destino}`;
             btn.innerHTML = `<i class="fas ${icono}"></i> Cambiar a ${nombreDestino}`;
+            document.querySelectorAll('#moduleTabs .module-tab').forEach(tab => {
+                const activo = tab.dataset.modulo === moduloActual;
+                tab.classList.toggle('active', activo);
+                tab.setAttribute('aria-selected', activo ? 'true' : 'false');
+            });
         }
 
         function cambiarAOtroModulo() {
