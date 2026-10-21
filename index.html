@@ -17,6 +17,9 @@
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
     <!-- Tesseract.js OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js">
@@ -1376,6 +1379,20 @@
         #vencimientosList {
             max-height: 400px;
             overflow-y: auto;
+            --list-ink: #1e3d52;
+            --list-ink-soft: #3c5668;
+            --list-muted: #8b97a4;
+            --list-line: rgba(30, 61, 82, 0.08);
+            --list-rule: rgba(30, 61, 82, 0.16);
+            color: var(--list-ink);
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        }
+        body.dark-mode #vencimientosList {
+            --list-ink: #d7e3ec;
+            --list-ink-soft: #b7c6d2;
+            --list-muted: #8ea0ae;
+            --list-line: rgba(255, 255, 255, 0.08);
+            --list-rule: rgba(255, 255, 255, 0.16);
         }
         .tramites-heading-label {
             display: inline-flex;
@@ -1558,43 +1575,65 @@
         .vencimiento-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border);
+            gap: 14px;
+            padding: 15px 4px;
+            border-bottom: 1px solid var(--list-line, var(--border));
             cursor: pointer;
             transition: background 0.2s;
         }
         .vencimiento-item:hover {
-            background: var(--hover-row);
-            margin: 0 -8px;
-            padding-left: 8px;
-            padding-right: 8px;
-            border-radius: 6px;
+            background: rgba(30, 61, 82, 0.035);
+        }
+        body.dark-mode .vencimiento-item:hover {
+            background: rgba(255, 255, 255, 0.04);
         }
         .vencimiento-fecha {
+            position: relative;
             flex-shrink: 0;
-            width: 46px;
+            width: 64px;
+            padding-right: 14px;
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            line-height: 1.05;
-            color: var(--accent);
+            line-height: 1;
+            color: var(--list-ink, var(--text-primary));
+            text-align: center;
+        }
+        .vencimiento-fecha::after {
+            content: "";
+            position: absolute;
+            right: 0;
+            top: 50%;
+            width: 1px;
+            height: 36px;
+            transform: translateY(-50%);
+            background: var(--list-rule, var(--border));
         }
         .vencimiento-fecha .dia {
-            font-size: 1.15rem;
-            font-weight: 700;
+            font-size: 1.28rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
         }
         .vencimiento-fecha .mes {
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
+            margin-top: 4px;
+            font-size: 0.64rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
+            color: var(--list-ink-soft, var(--accent));
+            line-height: 1;
         }
         .vencimiento-fecha .anio {
-            font-size: 0.68rem;
-            font-weight: 500;
-            color: var(--text-secondary);
+            margin-top: 2px;
+            font-size: 0.64rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            color: var(--list-muted, var(--text-secondary));
+            line-height: 1;
         }
         .fecha-compacta {
             display: contents;
@@ -1640,15 +1679,101 @@
             min-width: 0;
         }
         .vencimiento-item .vencimiento-info .nombre {
+            font-size: 0.95rem;
             font-weight: 600;
+            letter-spacing: -0.011em;
+            color: var(--list-ink, var(--text-primary));
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .vencimiento-item .vencimiento-info .detalle {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--list-muted, var(--text-secondary));
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .vencimiento-item .vencimiento-estado {
             flex-shrink: 0;
             margin-left: auto;
+        }
+        #vencimientosList .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 12px 6px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        #vencimientosList .status-badge::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+        #vencimientosList .status-badge.on-time {
+            background: #e6eddc;
+            color: #5f7348;
+        }
+        #vencimientosList .status-badge.on-time::before {
+            background: #7f9a64;
+        }
+        #vencimientosList .status-badge.warning {
+            background: #f4ecd4;
+            color: #9a7b2e;
+        }
+        #vencimientosList .status-badge.warning::before {
+            background: #d4ae4a;
+        }
+        #vencimientosList .status-badge.expired {
+            background: #f8e6e4;
+            color: #9a534c;
+        }
+        #vencimientosList .status-badge.expired::before {
+            background: #d17b74;
+        }
+        #vencimientosList .status-badge.retirado {
+            background: #e2e9f5;
+            color: #4e6894;
+        }
+        #vencimientosList .status-badge.retirado::before {
+            background: #6d8ec4;
+        }
+        body.dark-mode #vencimientosList .status-badge.on-time {
+            background: rgba(127, 154, 100, 0.18);
+            color: #c9dcb8;
+        }
+        body.dark-mode #vencimientosList .status-badge.on-time::before {
+            background: #9bb882;
+        }
+        body.dark-mode #vencimientosList .status-badge.warning {
+            background: rgba(212, 174, 74, 0.16);
+            color: #ead7a6;
+        }
+        body.dark-mode #vencimientosList .status-badge.warning::before {
+            background: #e0c06a;
+        }
+        body.dark-mode #vencimientosList .status-badge.expired {
+            background: rgba(209, 123, 116, 0.16);
+            color: #f0c4c0;
+        }
+        body.dark-mode #vencimientosList .status-badge.expired::before {
+            background: #e0928c;
+        }
+        body.dark-mode #vencimientosList .status-badge.retirado {
+            background: rgba(109, 142, 196, 0.18);
+            color: #c9d6ee;
+        }
+        body.dark-mode #vencimientosList .status-badge.retirado::before {
+            background: #8eadd6;
         }
         .falta-expediente {
             display: inline-flex;
@@ -1773,46 +1898,39 @@
             .vencimiento-encabezado,
             .vencimiento-item {
                 display: grid;
-                grid-template-columns: 13.5rem minmax(8.5rem, 16rem) minmax(6.5rem, 1fr) 6.5rem 8.25rem;
-                column-gap: 24px;
+                grid-template-columns: 4.75rem minmax(10rem, 1.6fr) minmax(6.5rem, 1fr) 6.5rem max-content;
+                column-gap: 22px;
                 align-items: center;
             }
             .vencimiento-encabezado {
-                padding: 2px 12px 8px;
+                padding: 2px 4px 10px;
                 margin-bottom: 2px;
-                border-bottom: 1px solid var(--border);
-                font-size: 0.7rem;
-                font-weight: 700;
-                letter-spacing: 0.06em;
+                border-bottom: 1px solid var(--list-line, var(--border));
+                font-size: 0.68rem;
+                font-weight: 600;
+                letter-spacing: 0.07em;
                 text-transform: uppercase;
-                color: var(--text-secondary);
+                color: var(--list-muted, var(--text-secondary));
+            }
+            .vencimiento-encabezado span:first-child {
+                text-align: center;
             }
             .vencimiento-encabezado span:last-child,
             .vencimiento-estado {
                 text-align: right;
             }
             .vencimiento-item {
-                padding: 12px;
+                padding: 16px 4px;
                 margin: 0;
             }
             .vencimiento-item:hover {
                 margin: 0;
-                padding: 12px;
+                padding: 16px 4px;
             }
             .vencimiento-fecha {
                 width: auto;
-                align-items: flex-start;
-            }
-            .fecha-compacta {
-                display: none;
-            }
-            .fecha-larga {
-                display: block;
-                font-size: 0.92rem;
-                font-weight: 600;
-                color: var(--text-primary);
-                white-space: nowrap;
-                letter-spacing: 0.01em;
+                align-items: center;
+                justify-self: stretch;
             }
             .vencimiento-info .nombre,
             .vencimiento-info .detalle {
@@ -1827,7 +1945,7 @@
                 font-weight: 600;
                 font-variant-numeric: tabular-nums;
                 letter-spacing: 0.02em;
-                color: var(--text-primary);
+                color: var(--list-ink, var(--text-primary));
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
@@ -1842,6 +1960,7 @@
             }
             .vencimiento-estado {
                 margin-left: 0;
+                justify-self: end;
             }
         }
         @media (max-width: 768px) {
@@ -2039,10 +2158,17 @@
                 gap: 4px;
             }
             .vencimiento-item {
-                gap: 10px;
+                gap: 12px;
+                padding: 14px 2px;
             }
             .vencimiento-fecha {
-                width: 42px;
+                width: 60px;
+                padding-right: 12px;
+            }
+            #vencimientosList .status-badge {
+                gap: 6px;
+                padding: 5px 10px 5px 8px;
+                font-size: 0.72rem;
             }
             .fab-nuevo-tramite {
                 right: 16px;
