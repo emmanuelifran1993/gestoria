@@ -1573,13 +1573,45 @@
             color: var(--text-primary);
         }
         .vencimiento-item {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 14px;
-            padding: 15px 4px;
+            padding: 15px 4px 15px 14px;
             border-bottom: 1px solid var(--list-line, var(--border));
             cursor: pointer;
             transition: background 0.2s;
+        }
+        .vencimiento-item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 8px;
+            bottom: 8px;
+            width: 3px;
+            border-radius: 2px;
+            background: #7f9a64;
+        }
+        .vencimiento-item.estado-warning::before {
+            background: #d4ae4a;
+        }
+        .vencimiento-item.estado-expired::before {
+            background: #d17b74;
+        }
+        .vencimiento-item.estado-retirado::before {
+            background: #6d8ec4;
+        }
+        body.dark-mode .vencimiento-item::before {
+            background: #9bb882;
+        }
+        body.dark-mode .vencimiento-item.estado-warning::before {
+            background: #e0c06a;
+        }
+        body.dark-mode .vencimiento-item.estado-expired::before {
+            background: #e0928c;
+        }
+        body.dark-mode .vencimiento-item.estado-retirado::before {
+            background: #8eadd6;
         }
         .vencimiento-item:hover {
             background: rgba(30, 61, 82, 0.035);
@@ -1700,80 +1732,41 @@
             margin-left: auto;
         }
         #vencimientosList .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 6px 12px 6px 10px;
-            border-radius: 999px;
-            font-size: 0.75rem;
+            display: inline;
+            padding: 0;
+            border-radius: 0;
+            background: none;
+            font-family: inherit;
+            font-size: 0.82rem;
             font-weight: 500;
-            letter-spacing: 0.01em;
-            line-height: 1;
+            letter-spacing: 0;
+            line-height: 1.2;
             white-space: nowrap;
-        }
-        #vencimientosList .status-badge::before {
-            content: "";
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-            flex-shrink: 0;
-        }
-        #vencimientosList .status-badge.on-time {
-            background: #e6eddc;
             color: #5f7348;
         }
-        #vencimientosList .status-badge.on-time::before {
-            background: #7f9a64;
+        #vencimientosList .status-badge::before {
+            content: none;
         }
         #vencimientosList .status-badge.warning {
-            background: #f4ecd4;
             color: #9a7b2e;
         }
-        #vencimientosList .status-badge.warning::before {
-            background: #d4ae4a;
-        }
         #vencimientosList .status-badge.expired {
-            background: #f8e6e4;
             color: #9a534c;
         }
-        #vencimientosList .status-badge.expired::before {
-            background: #d17b74;
-        }
         #vencimientosList .status-badge.retirado {
-            background: #e2e9f5;
             color: #4e6894;
         }
-        #vencimientosList .status-badge.retirado::before {
-            background: #6d8ec4;
-        }
-        body.dark-mode #vencimientosList .status-badge.on-time {
-            background: rgba(127, 154, 100, 0.18);
+        body.dark-mode #vencimientosList .status-badge {
             color: #c9dcb8;
         }
-        body.dark-mode #vencimientosList .status-badge.on-time::before {
-            background: #9bb882;
-        }
         body.dark-mode #vencimientosList .status-badge.warning {
-            background: rgba(212, 174, 74, 0.16);
             color: #ead7a6;
         }
-        body.dark-mode #vencimientosList .status-badge.warning::before {
-            background: #e0c06a;
-        }
         body.dark-mode #vencimientosList .status-badge.expired {
-            background: rgba(209, 123, 116, 0.16);
             color: #f0c4c0;
         }
-        body.dark-mode #vencimientosList .status-badge.expired::before {
-            background: #e0928c;
-        }
         body.dark-mode #vencimientosList .status-badge.retirado {
-            background: rgba(109, 142, 196, 0.18);
             color: #c9d6ee;
-        }
-        body.dark-mode #vencimientosList .status-badge.retirado::before {
-            background: #8eadd6;
         }
         .falta-expediente {
             display: inline-flex;
@@ -1898,12 +1891,20 @@
             .vencimiento-encabezado,
             .vencimiento-item {
                 display: grid;
-                grid-template-columns: 4.75rem minmax(10rem, 1.6fr) minmax(6.5rem, 1fr) 6.5rem max-content;
-                column-gap: 22px;
+                width: 100%;
+                grid-template-columns: 5rem minmax(0, 2.6fr) minmax(7.5rem, 1.25fr) 6.75rem minmax(7.25rem, 1fr);
+                column-gap: 18px;
                 align-items: center;
+                padding-left: 14px;
+                padding-right: 4px;
+            }
+            .vencimiento-encabezado > span,
+            .vencimiento-item > * {
+                min-width: 0;
             }
             .vencimiento-encabezado {
-                padding: 2px 4px 10px;
+                padding-top: 2px;
+                padding-bottom: 10px;
                 margin-bottom: 2px;
                 border-bottom: 1px solid var(--list-line, var(--border));
                 font-size: 0.68rem;
@@ -1911,6 +1912,11 @@
                 letter-spacing: 0.07em;
                 text-transform: uppercase;
                 color: var(--list-muted, var(--text-secondary));
+            }
+            .vencimiento-encabezado span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }
             .vencimiento-encabezado span:first-child {
                 text-align: center;
@@ -1920,12 +1926,16 @@
                 text-align: right;
             }
             .vencimiento-item {
-                padding: 16px 4px;
+                padding-top: 16px;
+                padding-bottom: 16px;
                 margin: 0;
             }
             .vencimiento-item:hover {
                 margin: 0;
-                padding: 16px 4px;
+                padding-top: 16px;
+                padding-bottom: 16px;
+                padding-left: 14px;
+                padding-right: 4px;
             }
             .vencimiento-fecha {
                 width: auto;
@@ -1958,9 +1968,10 @@
             .vencimiento-detalle-expandido .detalle-tipo-celular {
                 display: none;
             }
-            .vencimiento-estado {
+            .vencimiento-item .vencimiento-estado {
                 margin-left: 0;
-                justify-self: end;
+                justify-self: stretch;
+                text-align: right;
             }
         }
         @media (max-width: 768px) {
@@ -2172,16 +2183,14 @@
             }
             .vencimiento-item {
                 gap: 12px;
-                padding: 14px 2px;
+                padding: 14px 2px 14px 12px;
             }
             .vencimiento-fecha {
                 width: 60px;
                 padding-right: 12px;
             }
             #vencimientosList .status-badge {
-                gap: 6px;
-                padding: 5px 10px 5px 8px;
-                font-size: 0.72rem;
+                font-size: 0.78rem;
             }
             .fab-nuevo-tramite {
                 right: 16px;
@@ -3987,7 +3996,7 @@
 
                 return `
                             <div>
-                                <div class="vencimiento-item" onclick="toggleVencimientoDetalle('${t.id}')">
+                                <div class="vencimiento-item estado-${estado.class}" onclick="toggleVencimientoDetalle('${t.id}')">
                                     ${fechaHtml}
                                     <div class="vencimiento-info">
                                         <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
