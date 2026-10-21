@@ -5,7 +5,7 @@
  * Las peticiones a Supabase pasan directo (la app gestiona la cola offline).
  */
 
-const CACHE_VERSION = 'gestoria-pwa-v11';
+const CACHE_VERSION = 'gestoria-pwa-v12';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const STATIC_ASSETS = [
