@@ -989,11 +989,92 @@
             gap: 12px;
         }
         #tramiteModalOverlay .modal {
-            max-width: 720px;
+            max-width: 460px;
+            border-radius: 22px;
+        }
+        .tramite-form .form-group {
+            margin-bottom: 18px;
         }
         .tramite-form .form-group label {
-            letter-spacing: 0.04em;
-            font-size: 0.78rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #243044;
+        }
+        .tramite-form .form-group label i {
+            width: 16px;
+            text-align: center;
+            color: #3d4c5f;
+            font-size: 0.92rem;
+        }
+        .tramite-form .campo {
+            position: relative;
+        }
+        .tramite-form .campo > i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8b97a6;
+            font-size: 0.95rem;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .tramite-form .campo input,
+        .tramite-form .campo select,
+        .tramite-form .campo textarea {
+            background-color: #f4f7fb;
+            border: 1px solid #e5ebf2;
+            border-radius: 14px;
+            min-height: 48px;
+            padding: 12px 16px;
+            color: #243044;
+            box-shadow: none;
+        }
+        .tramite-form .campo-icono input,
+        .tramite-form .campo-icono textarea {
+            padding-left: 42px;
+        }
+        .tramite-form .campo select {
+            appearance: none;
+            padding-right: 40px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238b97a6' d='M1.4.6 6 5.2 10.6.6 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 12px 8px;
+            cursor: pointer;
+        }
+        .tramite-form .campo select:invalid {
+            color: #8b97a6;
+        }
+        .tramite-form .campo select option {
+            color: #243044;
+        }
+        .tramite-form .campo input:focus,
+        .tramite-form .campo select:focus,
+        .tramite-form .campo textarea:focus {
+            border-color: #7aa7e8;
+            box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.16);
+        }
+        .tramite-form .campo-salida input {
+            pointer-events: none;
+            caret-color: transparent;
+            cursor: default;
+        }
+        .tramite-form .campo textarea {
+            min-height: 84px;
+            resize: vertical;
+        }
+        .tramite-form .photo-action {
+            border-radius: 14px;
+            border: 1px solid #e5ebf2;
+            background: #f4f7fb;
+            min-height: 72px;
         }
         .tramite-form .req {
             color: var(--danger);
@@ -1048,6 +1129,67 @@
             background: var(--urgent-bg);
             color: #c0392b;
             box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.12);
+        }
+        .tramite-form .urgencia-toggle {
+            gap: 10px;
+        }
+        .tramite-form .urgencia-btn {
+            min-height: 52px;
+            border-radius: 14px;
+            border: 1.5px solid #e5ebf2;
+            background: #f7f8fb;
+            color: #5c6b7e;
+            font-weight: 700;
+            box-shadow: none;
+        }
+        .tramite-form .urgencia-btn:hover {
+            border-color: #c5d0dc;
+            color: #243044;
+        }
+        .tramite-form .urgencia-btn.active[data-urgencia="Común"] {
+            border-color: #4d8dff;
+            background: #f3f8ff;
+            color: #2b6de0;
+            box-shadow: none;
+        }
+        .tramite-form .urgencia-btn.active[data-urgencia="Urgente"] {
+            border-color: #e07a72;
+            background: #fff6f5;
+            color: #c4473e;
+            box-shadow: none;
+        }
+        body.dark-mode .tramite-form .form-group label,
+        body.dark-mode .tramite-form .form-group label i {
+            color: #e8eef4;
+        }
+        body.dark-mode .tramite-form .campo input,
+        body.dark-mode .tramite-form .campo select,
+        body.dark-mode .tramite-form .campo textarea {
+            background-color: #2a3038;
+            border-color: #3c4450;
+            color: #e8eef4;
+        }
+        body.dark-mode .tramite-form .campo select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a8b4c2' d='M1.4.6 6 5.2 10.6.6 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+        }
+        body.dark-mode .tramite-form .campo select:invalid {
+            color: #a8b4c2;
+        }
+        body.dark-mode .tramite-form .campo select option {
+            color: #e8eef4;
+            background: #2a3038;
+        }
+        body.dark-mode .tramite-form .urgencia-btn {
+            background: #2a3038;
+            border-color: #3c4450;
+            color: #c5d0dc;
+        }
+        body.dark-mode .tramite-form .field-hint,
+        body.dark-mode .tramite-form .campo > i {
+            color: #a8b4c2;
+        }
+        body.dark-mode .tramite-form input[type="date"] {
+            color-scheme: dark;
         }
         .photo-actions {
             display: grid;
@@ -1888,12 +2030,15 @@
             box-shadow: 0 0 0 3px rgba(91, 127, 149, 0.15);
         }
         @media (min-width: 769px) {
+            .vencimiento-buscador {
+                margin-bottom: 20px;
+            }
             .vencimiento-encabezado,
             .vencimiento-item {
                 display: grid;
                 width: 100%;
-                grid-template-columns: 5rem minmax(0, 2.6fr) minmax(7.5rem, 1.25fr) 6.75rem minmax(7.25rem, 1fr);
-                column-gap: 18px;
+                grid-template-columns: 4.25rem minmax(12rem, 1fr) 10.4rem 6.1rem 7.8rem;
+                column-gap: 20px;
                 align-items: center;
                 padding-left: 14px;
                 padding-right: 4px;
@@ -1918,12 +2063,30 @@
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            .vencimiento-encabezado span:first-child {
+            .vencimiento-encabezado span:nth-child(1),
+            .vencimiento-encabezado span:nth-child(3),
+            .vencimiento-encabezado span:nth-child(4) {
                 text-align: center;
             }
-            .vencimiento-encabezado span:last-child,
+            .vencimiento-encabezado span:nth-child(5),
             .vencimiento-estado {
                 text-align: right;
+            }
+            .vencimiento-item > * {
+                position: relative;
+            }
+            .vencimiento-item > *:not(:last-child)::after {
+                content: "";
+                position: absolute;
+                right: -10px;
+                top: 50%;
+                width: 1px;
+                height: 36px;
+                transform: translateY(-50%);
+                background: var(--list-rule, var(--border));
+            }
+            .vencimiento-item > .vencimiento-fecha::after {
+                right: 8px;
             }
             .vencimiento-item {
                 padding-top: 16px;
@@ -1939,6 +2102,7 @@
             }
             .vencimiento-fecha {
                 width: auto;
+                padding-right: 0;
                 align-items: center;
                 justify-self: stretch;
             }
@@ -1955,6 +2119,7 @@
                 font-weight: 600;
                 font-variant-numeric: tabular-nums;
                 letter-spacing: 0.02em;
+                text-align: center;
                 color: var(--list-ink, var(--text-primary));
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -1963,9 +2128,11 @@
             .vencimiento-tipo {
                 display: block;
                 font-size: 0.95rem;
+                text-align: center;
                 white-space: nowrap;
             }
-            .vencimiento-detalle-expandido .detalle-tipo-celular {
+            .vencimiento-detalle-expandido .detalle-tipo-celular,
+            .vencimiento-detalle-expandido .detalle-expediente-celular {
                 display: none;
             }
             .vencimiento-item .vencimiento-estado {
@@ -2463,59 +2630,70 @@
                 <input type="hidden" id="tramiteId">
                 <input type="hidden" id="tramiteModulo" value="rpi">
                 <input type="hidden" id="tramiteUrgencia" value="">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Fecha <span class="req">*</span></label>
+                <div class="form-group">
+                    <label for="tramiteFecha"><i class="far fa-calendar" aria-hidden="true"></i> Fecha <span class="req">*</span></label>
+                    <div class="campo campo-icono campo-fecha">
+                        <i class="far fa-calendar" aria-hidden="true"></i>
                         <input type="date" id="tramiteFecha" required onchange="calcularSalida()">
                     </div>
-                    <div class="form-group">
-                        <label>Tipo de Trámite <span class="req">*</span></label>
+                </div>
+                <div class="form-group">
+                    <label for="tramiteTipo"><i class="fas fa-list" aria-hidden="true"></i> Tipo de trámite <span class="req">*</span></label>
+                    <div class="campo">
                         <select id="tramiteTipo" required onchange="calcularSalida()">
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Nombre / Cliente <span class="req">*</span></label>
-                    <input type="text" id="tramiteNombreCliente" required placeholder="Nombre del cliente">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>N° de Entrada / Expediente</label>
-                        <input type="text" id="tramiteNroEntrada" placeholder="Número" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" oninput="soloDigitosEntrada(this)">
+                    <label for="tramiteNombreCliente"><i class="far fa-user" aria-hidden="true"></i> Nombre / Cliente <span class="req">*</span></label>
+                    <div class="campo">
+                        <input type="text" id="tramiteNombreCliente" required autocomplete="name">
                     </div>
-                    <div class="form-group">
-                        <label>Para <span class="req">*</span></label>
+                </div>
+                <div class="form-group">
+                    <label for="tramiteNroEntrada"><i class="far fa-file-lines" aria-hidden="true"></i> N° de entrada / Expediente</label>
+                    <div class="campo">
+                        <input type="text" id="tramiteNroEntrada" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" oninput="soloDigitosEntrada(this)">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tramitePara"><i class="far fa-user" aria-hidden="true"></i> Para <span class="req">*</span></label>
+                    <div class="campo">
                         <select id="tramitePara" required>
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Urgencia <span class="req">*</span></label>
-                        <div class="urgencia-toggle" role="group" aria-label="Urgencia">
-                            <button type="button" class="urgencia-btn" data-urgencia="Común" onclick="setUrgencia('Común')" aria-pressed="false">
-                                <i class="fas fa-clock"></i> Común
-                            </button>
-                            <button type="button" class="urgencia-btn" data-urgencia="Urgente" onclick="setUrgencia('Urgente')" aria-pressed="false">
-                                <i class="fas fa-bolt"></i> Urgente
-                            </button>
-                        </div>
-                        <span class="field-hint" id="urgenciaHint">Elegí Común o Urgente. Cambia la fecha de salida.</span>
+                <div class="form-group">
+                    <label><i class="fas fa-bolt" aria-hidden="true"></i> Urgencia <span class="req">*</span></label>
+                    <div class="urgencia-toggle" role="group" aria-label="Urgencia">
+                        <button type="button" class="urgencia-btn" data-urgencia="Común" onclick="setUrgencia('Común')" aria-pressed="false">
+                            <i class="fas fa-clock" aria-hidden="true"></i> Común
+                        </button>
+                        <button type="button" class="urgencia-btn" data-urgencia="Urgente" onclick="setUrgencia('Urgente')" aria-pressed="false">
+                            <i class="fas fa-bolt" aria-hidden="true"></i> Urgente
+                        </button>
                     </div>
-                    <div class="form-group">
-                        <label>Fecha de Salida (Estimada)</label>
-                        <input type="date" id="tramiteSalida" readonly style="background-color:var(--hover-row);">
-                        <span class="field-hint">Se calcula sola según el tipo y la urgencia, en días hábiles.</span>
+                    <span class="field-hint" id="urgenciaHint">Elegí Común o Urgente. Cambia la fecha de salida.</span>
+                </div>
+                <div class="form-group">
+                    <label for="tramiteSalidaVista"><i class="far fa-calendar" aria-hidden="true"></i> Fecha de salida (estimada)</label>
+                    <div class="campo campo-icono campo-salida">
+                        <i class="far fa-calendar" aria-hidden="true"></i>
+                        <input type="text" id="tramiteSalidaVista" readonly tabindex="-1" aria-readonly="true">
+                    </div>
+                    <input type="hidden" id="tramiteSalida">
+                    <span class="field-hint">Se calcula sola según el tipo y la urgencia, en días hábiles.</span>
+                </div>
+                <div class="form-group">
+                    <label for="tramiteNotas"><i class="far fa-note-sticky" aria-hidden="true"></i> Notas</label>
+                    <div class="campo">
+                        <textarea id="tramiteNotas" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Notas</label>
-                    <textarea id="tramiteNotas" rows="2" placeholder="Observaciones..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Fotografía</label>
+                    <label><i class="fas fa-camera" aria-hidden="true"></i> Fotografía</label>
                     <div class="photo-actions">
                         <button type="button" class="photo-action" onclick="openCamera()">
                             <i class="fas fa-camera"></i>
@@ -3673,7 +3851,6 @@
             actualizarBotonFiltro();
             actualizarBotonCambioModulo();
             updateStats();
-            showToast(`Módulo ${modulo.toUpperCase()} seleccionado`, 'info');
         }
 
         function actualizarBotonCambioModulo() {
@@ -3983,7 +4160,8 @@
                        </div>`
                     : `<div class="vencimiento-fecha" aria-label="Sin fecha de presentación"><span class="dia">—</span></div>`;
 
-                const retiradoChecked = (t.retirado || t.salidaReal) ? 'checked' : '';
+                const estaRetirado = !!(t.retirado || t.salidaReal);
+                const retiradoChecked = estaRetirado ? 'checked' : '';
                 const fechaRetiro = t.salidaReal ? formatearFechaVisual(t.salidaReal) : '';
                 const esUrgente = t.urgencia === 'Urgente';
                 const tipoClase = esUrgente ? 'tu' : 'tc';
@@ -4017,7 +4195,7 @@
                                             <i class="fas fa-trash" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                    <div class="detalle-row">
+                                    <div class="detalle-row detalle-expediente-celular">
                                         <span class="detalle-label">Número de expediente:</span>
                                         <span class="detalle-valor-bold">${t.nroEntrada || 'No registrado'}</span>
                                     </div>
@@ -4028,10 +4206,10 @@
                                     <div class="detalle-row detalle-tipo-celular">
                                         <span class="tipo-leyenda ${tipoClase}">${tipoLargo}</span>
                                     </div>
-                                    <div class="detalle-row">
+                                    ${estaRetirado ? '' : `<div class="detalle-row">
                                         <span class="detalle-label">Fecha de Salida Estimada:</span>
                                         <span>${formatearFechaVisual(t.salida)}</span>
-                                    </div>
+                                    </div>`}
                                     <div class="detalle-row detalle-row-retirado">
                                         <span class="detalle-label">Retirado</span>
                                         <label class="retirado-casillero">
@@ -4477,8 +4655,21 @@
                 document.getElementById('tramiteFecha').value = new Date().toISOString().split('T')[0];
             }
 
+            pintarSalidaEstimada();
             modal.classList.add('active');
             if (enfocarEntradaVacia) enfocarNroEntrada();
+        }
+
+        function pintarSalidaEstimada() {
+            const iso = document.getElementById('tramiteSalida')?.value || '';
+            const vista = document.getElementById('tramiteSalidaVista');
+            if (!vista) return;
+            if (!iso) {
+                vista.value = '';
+                return;
+            }
+            const [anio, mes, dia] = iso.split('-');
+            vista.value = (dia && mes && anio) ? `${dia}/${mes}/${anio}` : iso;
         }
 
         function closeTramiteModal() {
@@ -4577,6 +4768,7 @@
             }
 
             document.getElementById('tramiteSalida').value = fechaSalida.toISOString().split('T')[0];
+            pintarSalidaEstimada();
         }
 
         async function saveTramite(event) {
