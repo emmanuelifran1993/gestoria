@@ -136,9 +136,19 @@
             font-weight: 600;
             letter-spacing: 0.5px;
         }
-        .sidebar-header i {
-            font-size: 1.5rem;
-            color: var(--accent-light);
+        .sidebar-logo {
+            width: 1.7rem;
+            height: 1.7rem;
+            flex-shrink: 0;
+            background-color: var(--accent-light);
+            -webkit-mask-image: url("./icons/logo-menu.png");
+            mask-image: url("./icons/logo-menu.png");
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            mask-position: center;
+            -webkit-mask-size: contain;
+            mask-size: contain;
         }
         .sidebar-nav {
             flex: 1;
@@ -2466,8 +2476,8 @@
 
     <nav class="sidebar closed" id="sidebar">
         <div class="sidebar-header">
-            <i class="fas fa-scale-balanced"></i>
-            <span>Escribanía</span>
+            <span class="sidebar-logo" aria-hidden="true"></span>
+            <span>Gestoría</span>
         </div>
         <div class="sidebar-nav">
             <a data-page="home" class="active" onclick="navigateTo('home')">

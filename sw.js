@@ -5,7 +5,7 @@
  * Las peticiones a Supabase pasan directo (la app gestiona la cola offline).
  */
 
-const CACHE_VERSION = 'gestoria-pwa-v16';
+const CACHE_VERSION = 'gestoria-pwa-v17';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const STATIC_ASSETS = [
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
     './manifest.json',
     './icons/icon-192.png',
     './icons/icon-512.png',
+    './icons/logo-menu.png',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2',
