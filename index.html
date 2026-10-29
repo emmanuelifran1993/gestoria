@@ -1953,6 +1953,81 @@
         body.dark-mode .falta-expediente {
             color: #d7bf86;
         }
+        .copiar-expediente {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            background: transparent;
+            color: var(--list-muted, var(--text-secondary));
+            opacity: 0.55;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.68rem;
+            line-height: 1;
+        }
+        .copiar-expediente:hover {
+            opacity: 0.9;
+            color: var(--list-ink-soft, var(--text-secondary));
+        }
+        .copiar-expediente:focus-visible {
+            opacity: 1;
+            outline: 2px solid #8a97a8;
+            outline-offset: 1px;
+        }
+        .detalle-expediente-valor {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .aviso-despacho-rpi {
+            position: fixed;
+            left: 50%;
+            bottom: 28px;
+            z-index: 10001;
+            transform: translateX(-50%) translateY(6px);
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(44, 62, 80, 0.88);
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            text-decoration: none;
+            white-space: nowrap;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .aviso-despacho-rpi.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+        .aviso-despacho-rpi:hover {
+            background: rgba(44, 62, 80, 0.96);
+        }
+        body.dark-mode .aviso-despacho-rpi {
+            background: rgba(226, 232, 238, 0.94);
+            color: #1c2430;
+        }
+        body.dark-mode .aviso-despacho-rpi:hover {
+            background: #f4f7fa;
+        }
+        @media (max-width: 768px) {
+            .aviso-despacho-rpi {
+                bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+                max-width: calc(100vw - 32px);
+                white-space: normal;
+                text-align: center;
+            }
+        }
         .vencimiento-detalle-expandido .detalle-valor-bold {
             font-weight: 700;
             color: var(--text-primary);
@@ -2137,7 +2212,10 @@
                 white-space: nowrap;
             }
             .vencimiento-expediente {
-                display: block;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
                 min-width: 0;
                 font-size: 0.95rem;
                 font-weight: 600;
@@ -2146,8 +2224,12 @@
                 text-align: center;
                 color: var(--list-ink, var(--text-primary));
                 overflow: hidden;
-                text-overflow: ellipsis;
                 white-space: nowrap;
+            }
+            .expediente-numero {
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             .vencimiento-tipo {
                 display: block;
@@ -2906,6 +2988,7 @@
 
     <!-- Toast -->
     <div class="toast-container" id="toastContainer"></div>
+    <a id="avisoDespachoRpi" class="aviso-despacho-rpi" href="http://138.117.79.125/consulta/index.php" target="_blank" rel="noopener noreferrer" aria-hidden="true" onclick="ocultarAvisoDespachoRpi()">Consultar en Despacho de RPI</a>
 
     <!-- ================================================================== -->
     <!-- ====== JAVASCRIPT – SOLO SE MODIFICA EL SISTEMA DE ALMACENAMIENTO ====== -->
@@ -3966,6 +4049,74 @@
             }, 3500);
         }
 
+        function numeroExpedienteSieteCifras(nro) {
+            const digitos = String(nro || '').replace(/\D/g, '');
+            if (!digitos) return '';
+            return digitos.slice(-7).padStart(7, '0');
+        }
+
+        function copiarTextoPlano(texto) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(texto).then(() => true).catch(() => copiarTextoPlanoFallback(texto));
+            }
+            return Promise.resolve(copiarTextoPlanoFallback(texto));
+        }
+
+        function copiarTextoPlanoFallback(texto) {
+            const area = document.createElement('textarea');
+            area.value = texto;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.top = '0';
+            area.style.left = '-9999px';
+            document.body.appendChild(area);
+            area.focus();
+            area.select();
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (e) {
+                ok = false;
+            }
+            area.remove();
+            return ok;
+        }
+
+        let avisoDespachoTimer = null;
+
+        function mostrarAvisoDespachoRpi() {
+            const aviso = document.getElementById('avisoDespachoRpi');
+            if (!aviso) return;
+            aviso.classList.add('visible');
+            aviso.setAttribute('aria-hidden', 'false');
+            clearTimeout(avisoDespachoTimer);
+            avisoDespachoTimer = setTimeout(ocultarAvisoDespachoRpi, 8000);
+        }
+
+        function ocultarAvisoDespachoRpi() {
+            const aviso = document.getElementById('avisoDespachoRpi');
+            if (!aviso) return;
+            aviso.classList.remove('visible');
+            aviso.setAttribute('aria-hidden', 'true');
+            clearTimeout(avisoDespachoTimer);
+            avisoDespachoTimer = null;
+        }
+
+        function copiarExpedienteRpi(event, id) {
+            if (event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }
+            const tramite = getData().find(t => t.id === id);
+            if (!tramite || tramite.modulo !== 'rpi') return;
+            const numero = numeroExpedienteSieteCifras(tramite.nroEntrada);
+            if (!numero) return;
+            copiarTextoPlano(numero).then((ok) => {
+                if (ok) mostrarAvisoDespachoRpi();
+                else showToast('No se pudo copiar el número.', 'error');
+            });
+        }
+
         // 5.5 Estadísticas
         function coincideFiltroDashboard(tramite, filtro) {
             if (!filtro || filtro === 'total') return true;
@@ -4194,6 +4345,9 @@
                 const marcaFaltaExpediente = sinExpediente
                     ? `<span class="falta-expediente" title="Falta el número de expediente" aria-label="Falta el número de expediente">!</span>`
                     : '';
+                const botonCopiar = (moduloActual === 'rpi' && !sinExpediente)
+                    ? `<button type="button" class="copiar-expediente" title="Copiar" aria-label="Copiar número de expediente" onclick="copiarExpedienteRpi(event, '${t.id}')"><i class="far fa-copy" aria-hidden="true"></i></button>`
+                    : '';
 
                 return `
                             <div class="vencimiento-grupo ${isExpanded ? 'abierto' : ''} estado-${estado.class}">
@@ -4203,7 +4357,7 @@
                                         <span class="nombre">${t.nombreCliente || 'Sin cliente'}</span>
                                         <span class="detalle">${t.tramite || 'Sin tipo'}</span>
                                     </div>
-                                    <div class="vencimiento-expediente${sinExpediente ? ' sin-numero' : ''}">${sinExpediente ? marcaFaltaExpediente : t.nroEntrada}</div>
+                                    <div class="vencimiento-expediente${sinExpediente ? ' sin-numero' : ''}">${sinExpediente ? marcaFaltaExpediente : `<span class="expediente-numero">${t.nroEntrada}</span>${botonCopiar}`}</div>
                                     <div class="vencimiento-tipo ${tipoClase}" aria-label="${tipoLargo}">${tipoCorto}</div>
                                     <div class="vencimiento-estado">
                                         <span class="status-badge ${estado.class}">${estado.text}</span>
@@ -4220,7 +4374,7 @@
                                     </div>
                                     <div class="detalle-row detalle-expediente-celular">
                                         <span class="detalle-label">Número de expediente:</span>
-                                        <span class="detalle-valor-bold">${t.nroEntrada || 'No registrado'}</span>
+                                        <span class="detalle-valor-bold detalle-expediente-valor">${t.nroEntrada || 'No registrado'}${botonCopiar}</span>
                                     </div>
                                     <div class="detalle-row">
                                         <span>${t.para || 'Sin asignar'}</span>
