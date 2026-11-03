@@ -1168,6 +1168,31 @@
             color: #c4473e;
             box-shadow: none;
         }
+        .tramite-form .modalidad-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .tramite-form .modalidad-btn {
+            min-height: 52px;
+            padding: 10px 8px;
+            font-size: 0.86rem;
+            line-height: 1.2;
+            text-align: center;
+            white-space: normal;
+        }
+        .tramite-form .modalidad-btn.active[data-modalidad="Online"] {
+            border-color: #4d8dff;
+            background: #f3f8ff;
+            color: #2b6de0;
+            box-shadow: none;
+        }
+        .tramite-form .modalidad-btn.active[data-modalidad="Papel"] {
+            border-color: #c4a574;
+            background: #fbf7f0;
+            color: #8a6a3b;
+            box-shadow: none;
+        }
         body.dark-mode .tramite-form .form-group label,
         body.dark-mode .tramite-form .form-group label i {
             color: #e8eef4;
@@ -1193,6 +1218,16 @@
             background: #2a3038;
             border-color: #3c4450;
             color: #c5d0dc;
+        }
+        body.dark-mode .tramite-form .modalidad-btn.active[data-modalidad="Online"] {
+            border-color: #6aa4ff;
+            background: #1c2a40;
+            color: #9ec4ff;
+        }
+        body.dark-mode .tramite-form .modalidad-btn.active[data-modalidad="Papel"] {
+            border-color: #c4a574;
+            background: #2e281c;
+            color: #e6d3b0;
         }
         body.dark-mode .tramite-form .field-hint,
         body.dark-mode .tramite-form .campo > i {
@@ -2055,6 +2090,14 @@
             color: var(--text-secondary);
             min-width: 140px;
         }
+        .vencimiento-detalle-expandido .detalle-modalidad {
+            padding-top: 4px;
+        }
+        .detalle-modalidad-texto {
+            font-style: italic;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
         .vencimiento-acciones {
             position: absolute;
             top: 8px;
@@ -2735,6 +2778,7 @@
                 <input type="hidden" id="tramiteId">
                 <input type="hidden" id="tramiteModulo" value="rpi">
                 <input type="hidden" id="tramiteUrgencia" value="">
+                <input type="hidden" id="tramiteModalidad" value="">
                 <div class="form-group">
                     <label for="tramiteFecha"><i class="far fa-calendar" aria-hidden="true"></i> Fecha <span class="req">*</span></label>
                     <div class="campo campo-icono campo-fecha">
@@ -2768,6 +2812,17 @@
                         <select id="tramitePara" required>
                             <option value="">Seleccionar...</option>
                         </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-laptop" aria-hidden="true"></i> Modalidad <span class="req">*</span></label>
+                    <div class="modalidad-toggle" role="group" aria-label="Modalidad del trámite">
+                        <button type="button" class="urgencia-btn modalidad-btn" data-modalidad="Online" onclick="setModalidad('Online')" aria-pressed="false">
+                            <i class="fas fa-laptop" aria-hidden="true"></i> Trámite Online
+                        </button>
+                        <button type="button" class="urgencia-btn modalidad-btn" data-modalidad="Papel" onclick="setModalidad('Papel')" aria-pressed="false">
+                            <i class="far fa-file-lines" aria-hidden="true"></i> Trámite en Papel
+                        </button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -3241,6 +3296,7 @@
                 nombreCliente: row.nombre_cliente,
                 nroEntrada: row.nro_entrada,
                 urgencia: row.urgencia,
+                modalidad: row.modalidad || '',
                 para: row.para,
                 salida: row.salida,
                 notas: row.notas,
@@ -3259,6 +3315,7 @@
                 nombre_cliente: tramite.nombreCliente,
                 nro_entrada: tramite.nroEntrada,
                 urgencia: tramite.urgencia,
+                modalidad: tramite.modalidad || null,
                 para: tramite.para,
                 salida: tramite.salida,
                 notas: tramite.notas,
@@ -3676,6 +3733,7 @@
                     nombre_cliente: t.nombreCliente || '',
                     nro_entrada: t.nroEntrada || '',
                     urgencia: t.urgencia || 'Común',
+                    modalidad: t.modalidad || null,
                     para: t.para || '',
                     salida: t.salida || '',
                     notas: t.notas || '',
@@ -4382,6 +4440,7 @@
                                     <div class="detalle-row detalle-tipo-celular">
                                         <span class="tipo-leyenda ${tipoClase}">${tipoLargo}</span>
                                     </div>
+                                    ${textoModalidad(t.modalidad) ? `<div class="detalle-row detalle-modalidad"><span class="detalle-modalidad-texto">${textoModalidad(t.modalidad)}</span></div>` : ''}
                                     ${estaRetirado ? '' : `<div class="detalle-row">
                                         <span class="detalle-label">Fecha de Salida Estimada:</span>
                                         <span>${formatearFechaVisual(t.salida)}</span>
@@ -4778,6 +4837,7 @@
             if (galleryInput) galleryInput.value = '';
             currentPhotoData = null;
             setUrgencia('');
+            setModalidad('');
 
             const moduloInicial = (!id && moduloForzado) ? moduloForzado : (moduloFiltro || 'rpi');
             document.getElementById('tramiteModulo').value = moduloInicial;
@@ -4805,6 +4865,7 @@
                     document.getElementById('tramiteNroEntrada').value = nroEntrada;
                     enfocarEntradaVacia = nroEntrada === '';
                     setUrgencia(tramite.urgencia || 'Común');
+                    setModalidad(tramite.modalidad || '');
                     document.getElementById('tramitePara').value = tramite.para || '';
                     document.getElementById('tramiteSalida').value = tramite.salida || '';
                     document.getElementById('tramiteNotas').value = tramite.notas || '';
@@ -4907,7 +4968,7 @@
         function setUrgencia(valor) {
             const input = document.getElementById('tramiteUrgencia');
             if (input) input.value = valor || '';
-            document.querySelectorAll('.urgencia-btn').forEach(btn => {
+            document.querySelectorAll('.urgencia-toggle .urgencia-btn').forEach(btn => {
                 const activo = !!valor && btn.dataset.urgencia === valor;
                 btn.classList.toggle('active', activo);
                 btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
@@ -4919,6 +4980,29 @@
                     : 'Elegí Común o Urgente. Cambia la fecha de salida.';
             }
             if (valor) calcularSalida();
+        }
+
+        function setModalidad(valor) {
+            const input = document.getElementById('tramiteModalidad');
+            if (input) input.value = valor || '';
+            document.querySelectorAll('.modalidad-btn').forEach(btn => {
+                const activo = !!valor && btn.dataset.modalidad === valor;
+                btn.classList.toggle('active', activo);
+                btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
+            });
+        }
+
+        function textoModalidad(valor) {
+            if (valor === 'Online') return 'Online';
+            if (valor === 'Papel') return 'En Papel';
+            return '';
+        }
+
+        function normalizarModalidad(valor) {
+            const texto = String(valor || '').trim().toLowerCase();
+            if (texto === 'online' || texto === 'trámite online' || texto === 'tramite online') return 'Online';
+            if (texto === 'papel' || texto === 'en papel' || texto === 'trámite en papel' || texto === 'tramite en papel') return 'Papel';
+            return '';
         }
 
         function calcularSalida() {
@@ -4961,6 +5045,7 @@
                 nombreCliente: document.getElementById('tramiteNombreCliente').value,
                 nroEntrada: String(document.getElementById('tramiteNroEntrada').value || '').replace(/\D/g, ''),
                 urgencia: document.getElementById('tramiteUrgencia').value,
+                modalidad: document.getElementById('tramiteModalidad').value,
                 para: document.getElementById('tramitePara').value,
                 salida: document.getElementById('tramiteSalida').value,
                 notas: document.getElementById('tramiteNotas').value,
@@ -4968,8 +5053,8 @@
                 retirado: false
             };
 
-            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente || !tramite.urgencia) {
-                showToast('Completá fecha, tipo, cliente, para y urgencia (Común o Urgente).', 'error');
+            if (!tramite.fecha || !tramite.tramite || !tramite.para || !tramite.nombreCliente || !tramite.urgencia || !tramite.modalidad) {
+                showToast('Completá fecha, tipo, cliente, para, modalidad (Online o en Papel) y urgencia (Común o Urgente).', 'error');
                 return;
             }
 
@@ -5693,6 +5778,7 @@
                 'Nombre / Cliente': t.nombreCliente,
                 'N° Entrada / Expediente': t.nroEntrada,
                 Urgencia: t.urgencia,
+                Modalidad: textoModalidad(t.modalidad),
                 Para: t.para,
                 Salida: formatearFechaVisual(t.salidaReal || t.salida),
                 'Salió': t.salidaReal ? 'Sí' : 'No',
@@ -5730,13 +5816,13 @@
             }
 
             const rows = tramites.map(t => [
-                formatearFechaVisual(t.fecha), t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, t.para,
+                formatearFechaVisual(t.fecha), t.tramite, t.nombreCliente, t.nroEntrada, t.urgencia, textoModalidad(t.modalidad), t.para,
                 formatearFechaVisual(t.salidaReal || t.salida), t.notas || '', t.modulo || 'RPI', t.retirado ? 'Retirado' : 'Pendiente'
             ]);
 
             doc.autoTable({
                 head: [
-                    ['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Para', 'Salida', 'Notas', 'Módulo',
+                    ['Fecha', 'Trámite', 'Nombre/Cliente', 'N° Entrada', 'Urgencia', 'Modalidad', 'Para', 'Salida', 'Notas', 'Módulo',
                         'Estado'
                     ]
                 ],
@@ -5781,6 +5867,7 @@
                                 nroEntrada: row['N° Entrada / Expediente'] || row['nroEntrada'] || row[
                                     'N° Entrada'] || '',
                                 urgencia: row['Urgencia'] || row['urgencia'] || 'Común',
+                                modalidad: normalizarModalidad(row['Modalidad'] || row['modalidad'] || ''),
                                 para: row['Para'] || row['para'] || '',
                                 salida: row['Salida'] || row['salida'] || '',
                                 notas: row['Notas'] || row['notas'] || '',
